@@ -25,6 +25,7 @@ OUTDIR="$(realpath "$1")"
 
 SRCDIR="$(dirname "$(dirname "$(realpath "$0")")")"
 GITVERSION="$($SRCDIR/contrib/gitversion.sh)"
+cp "$SRCDIR/LICENSE" "$SRCDIR/sub/initcmd/embedded/"
 
 info "building ..."
 CGO_ENABLED=0 go build -tags "$BUILD_TAGS" -o "$OUTDIR/wireleap-relay" -ldflags "

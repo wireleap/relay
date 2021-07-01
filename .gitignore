@@ -1,1 +1,4 @@
 build/
+
+sub/initcmd/embedded/*
+!sub/initcmd/embedded/*.go
