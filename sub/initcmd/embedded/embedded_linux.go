@@ -2,5 +2,5 @@ package embedded
 
 import "embed"
 
-//go:embed DISCLAIMER
+//go:embed LICENSE
 var FS embed.FS
