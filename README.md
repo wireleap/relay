@@ -43,7 +43,7 @@ The recommended installation procedure starts with the creation of a
 system user account specifically for the wireleap-relay.
 
 ```shell
-useradd --system -U --home-dir /opt/wireleap-relay wireleap-relay
+useradd -rUm --home-dir /opt/wireleap-relay wireleap-relay
 ```
 
 Next, download and verify the [latest release][releases]. Alternatively,
@@ -52,9 +52,7 @@ you can [build from source](#building).
 [releases]: https://github.com/wireleap/relay/releases
 
 ```shell
-# change to the wireleap-relay user
 su -l wireleap-relay
-cd /opt/wireleap-relay
 
 # download binary and hashfile for Linux
 DIST="https://github.com/wireleap/relay/releases/latest/download"
@@ -121,7 +119,8 @@ auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
 }
 ```
 
-Note: A `fronting` relay generally requires a [webserver proxying](#web-server-proxying) configuration.
+Note: A `fronting` relay generally requires a [webserver
+proxying](#web-server-proxying) configuration.
 
 ## Web server proxying
 
@@ -207,7 +206,6 @@ the daemon.
 
 ```shell
 su -l wireleap-relay
-cd /opt/wireleap-relay
 
 # start the relay in the foreground (ctrl+c to stop)
 ./wireleap-relay start --fg
@@ -228,7 +226,7 @@ prove too low for running a production relay. Consider changing it to a
 higher value.
 
 ```shell
-sudo ulimit -n 65535
+ulimit -n 65535
 ```
 
 ### Daemon supervisor
@@ -272,8 +270,8 @@ WantedBy=multi-user.target
 
 ```shell
 # create the systemd unit file and enable it
-$EDITOR /opt/wireleap-relay/wireleap-relay.service
-systemctl enable /opt/wireleap-relay/wireleap-relay.service
+$EDITOR /etc/systemd/system/wireleap-relay.service
+systemctl enable /etc/systemd/system/wireleap-relay.service
 
 # start the service, check on its status
 systemctl start wireleap-relay.service
@@ -316,6 +314,8 @@ affect the available balance immediately but increase the internally
 stored balance.
 
 ```shell
+su -l wireleap-relay
+
 # show available balance, sharetokens awaiting settlement window,
 # and last withdrawal from all contracts
 ./wireleap-relay balance
@@ -327,6 +327,8 @@ A relay operator may issue a withdrawal request up to or equal to their
 available balance.
 
 ```shell
+su -l wireleap-relay
+
 # show available balance
 ./wireleap-relay balance \
     --contract https://contract1.example.com
@@ -379,24 +381,24 @@ latest version is exposed via the directory's `/info` endpoint.
 The upgrade process is interactive so you will have the possibility
 to accept or decline based on the changelog for the new release version.
 
-```shell
-./wireleap-relay upgrade
-```
-
 If the upgrade was successful, the old binary is not deleted but kept as
 `wireleap-relay.prev` for rollback purposes in case issues manifest
 post-upgrade.
-
-```shell
-./wireleap-relay rollback
-```
 
 If the upgrade was not successful, it is possible to skip the faulty
 version explicitly.
 
 ```shell
+su -l wireleap-relay
+
+# perform interactive upgrade
+./wireleap-relay upgrade
+
+# rollback if required
+./wireleap-relay rollback
+
 # skip upgrades to version 1.2.3
-echo "1.2.3" > /opt/wireleap-relay/.skip-upgrade-version
+echo "1.2.3" > .skip-upgrade-version
 ```
 
 ## Versioning
