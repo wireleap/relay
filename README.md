@@ -226,7 +226,8 @@ prove too low for running a production relay. Consider changing it to a
 higher value.
 
 ```shell
-ulimit -n 65535
+echo 'wireleap-relay soft nofile 65535' >> /etc/security/limits.conf
+echo 'wireleap-relay hard nofile 65535' >> /etc/security/limits.conf
 ```
 
 ### Daemon supervisor
