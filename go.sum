@@ -1,6 +1,6 @@
 github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdnnjpJbkM4JQ=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
-github.com/wireleap/common v0.1.0 h1:4L7P0t4JBQkXRiPiV0tKSp/hqUal3puFYW997FHdJZQ=
+github.com/wireleap/common v0.1.0 h1:oCDuk85zLd/jWsjjOq6Mi3MBy8BaEhJMVBTI34OGXik=
 github.com/wireleap/common v0.1.0/go.mod h1:fkkbj+/ivixHoxo/Bie5JrS5eaSfCXGqvdXfWvd6PnA=
 golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a h1:kr2P4QFmQr29mSLA43kwrOcgcReGTfbE9N577tCTuBc=
 golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a/go.mod h1:P+XmwS30IXTQdn5tA2iutPOUgjI07+tq3H3K9MVA1s8=
