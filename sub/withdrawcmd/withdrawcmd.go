@@ -8,8 +8,8 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/wireleap/common/api/auth"
 	"github.com/wireleap/common/api/client"
+	"github.com/wireleap/common/api/interfaces/relaycontract"
 	"github.com/wireleap/common/api/signer"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -51,7 +51,7 @@ func Cmd() *cli.Subcmd {
 
 		var (
 			s  = signer.New(privkey)
-			cl = client.New(s, auth.Relay)
+			cl = client.New(s, relaycontract.T)
 		)
 
 		amt, err := strconv.ParseInt(*amount, 10, 64)

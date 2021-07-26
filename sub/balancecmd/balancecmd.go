@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/wireleap/common/api/auth"
 	"github.com/wireleap/common/api/client"
+	"github.com/wireleap/common/api/interfaces/relaycontract"
 	"github.com/wireleap/common/api/signer"
 	"github.com/wireleap/common/api/texturl"
 	"github.com/wireleap/common/cli"
@@ -61,7 +61,7 @@ func Cmd() *cli.Subcmd {
 
 		var (
 			s  = signer.New(privkey)
-			cl = client.New(s, auth.Relay)
+			cl = client.New(s, relaycontract.T)
 		)
 
 		for _, u := range scs {

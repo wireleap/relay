@@ -8,9 +8,10 @@ import (
 	"log"
 
 	"github.com/blang/semver"
-	"github.com/wireleap/common/api/auth"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
+	"github.com/wireleap/common/api/interfaces/relaycontract"
+	"github.com/wireleap/common/api/interfaces/relaydir"
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/signer"
 	"github.com/wireleap/common/api/texturl"
@@ -66,7 +67,7 @@ func LatestChannelVersion(f fsdir.T) (semver.Version, error) {
 	if err != nil {
 		return semver.Version{}, err
 	}
-	cl := client.New(signer.New(privkey), auth.Relay)
+	cl := client.New(signer.New(privkey), relaydir.T, relaycontract.T)
 	// NOTE: this depends on there being only 1 contract
 	var (
 		scurl texturl.URL
