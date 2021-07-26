@@ -3,9 +3,12 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/wireleap/common/api/interfaces/clientrelay"
+	"github.com/wireleap/common/api/interfaces/relaycontract"
+	"github.com/wireleap/common/api/interfaces/relaydir"
+	"github.com/wireleap/common/api/interfaces/relayrelay"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/commonsub/commonlib"
 	"github.com/wireleap/common/cli/commonsub/migratecmd"
@@ -19,7 +22,6 @@ import (
 	"github.com/wireleap/common/cli/commonsub/versioncmd"
 	"github.com/wireleap/common/cli/upgrade"
 
-	"github.com/wireleap/common/wlnet"
 	"github.com/wireleap/relay/sub/balancecmd"
 	"github.com/wireleap/relay/sub/checkconfigcmd"
 	"github.com/wireleap/relay/sub/initcmd"
@@ -57,11 +59,13 @@ func main() {
 			checkconfigcmd.Cmd,
 			balancecmd.Cmd(),
 			withdrawcmd.Cmd(),
-			versioncmd.Cmd(fmt.Sprintf(
-				"%s, protocol version %s",
-				version.VERSION_STRING,
-				wlnet.PROTO_VERSION.String(),
-			)),
+			versioncmd.Cmd(
+				&version.VERSION,
+				relaycontract.T,
+				relaydir.T,
+				relayrelay.T,
+				clientrelay.T,
+			),
 		},
 	}.Parse(os.Args).Run(cli.Home())
 }
