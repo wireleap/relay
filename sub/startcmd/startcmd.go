@@ -12,9 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/wireleap/common/api/auth"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
+	"github.com/wireleap/common/api/interfaces/relaycontract"
+	"github.com/wireleap/common/api/interfaces/relaydir"
 	"github.com/wireleap/common/api/jsonb"
 	"github.com/wireleap/common/api/sharetoken"
 	"github.com/wireleap/common/api/signer"
@@ -50,7 +51,7 @@ func serverun(fm fsdir.T) {
 		log.Fatal(err)
 	}
 
-	cl := client.New(signer.New(privkey), auth.Relay)
+	cl := client.New(signer.New(privkey), relaydir.T, relaycontract.T)
 
 	// load store
 	sts, err := ststore.New(fm.Path(filenames.Sharetokens), ststore.RelayKeyFunc)
