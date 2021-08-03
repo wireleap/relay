@@ -14,11 +14,11 @@ import (
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
 	"github.com/wireleap/common/api/contractinfo"
+	"github.com/wireleap/common/api/interfaces/clientrelay"
 	"github.com/wireleap/common/api/interfaces/relaydir"
 	"github.com/wireleap/common/api/jsonb"
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/cli/upgrade"
-	"github.com/wireleap/common/wlnet"
 	"github.com/wireleap/relay/relaycfg"
 	"github.com/wireleap/relay/version"
 )
@@ -68,7 +68,7 @@ func EnrollRelay(c *relaycfg.C, cl *client.Client, u *upgrade.Config) (final fun
 		}
 
 		d := *cfg
-		d.Version = &wlnet.PROTO_VERSION
+		d.Version = &clientrelay.T.Version
 		d.Pubkey = jsonb.PK(cl.Public())
 
 		var ddata *contractinfo.Directory
@@ -106,7 +106,7 @@ func EnrollRelay(c *relaycfg.C, cl *client.Client, u *upgrade.Config) (final fun
 
 	// heartbeat thread
 	go func() {
-		for _ = range tick.C {
+		for range tick.C {
 			for _, req := range requests {
 				st, err := relaydir.EnrollHandshake(cl, req)
 				if err != nil {
