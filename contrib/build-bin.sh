@@ -30,7 +30,6 @@ cp "$SRCDIR/LICENSE" "$SRCDIR/sub/initcmd/embedded/"
 info "building ..."
 CGO_ENABLED=0 go build -tags "$BUILD_TAGS" -o "$OUTDIR/wireleap-relay" -ldflags "
     -X github.com/wireleap/relay/version.GITREV=$GITVERSION \
-    -X github.com/wireleap/common/api/apiversion.VERSION_STRING=$GITVERSION
 "
 
 [ -z "$BUILD_USER" ] || chown -R "$BUILD_USER" "$OUTDIR"
