@@ -14,6 +14,7 @@ import (
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
 	"github.com/wireleap/common/api/contractinfo"
+	"github.com/wireleap/common/api/interfaces/clientrelay"
 	"github.com/wireleap/common/api/interfaces/relaydir"
 	"github.com/wireleap/common/api/jsonb"
 	"github.com/wireleap/common/api/status"
@@ -67,7 +68,7 @@ func EnrollRelay(c *relaycfg.C, cl *client.Client, u *upgrade.Config) (final fun
 		}
 
 		d := *cfg
-		d.Version = &version.VERSION
+		d.Version = &clientrelay.T.Version
 		d.Pubkey = jsonb.PK(cl.Public())
 
 		var ddata *contractinfo.Directory
