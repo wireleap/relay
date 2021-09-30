@@ -97,7 +97,7 @@ contracts.X | `string` | service contract endpoint url
 contracts.X.address | `string` | `wireleap://host:port[/uri]`
 contracts.X.role | `string` | `fronting` `entropic` `backing`
 contracts.X.key | `string` | `user:password` format enrollment key if required
-contracts.X.update_channel | `string` | update channel (default: `"default"`)
+contracts.X.upgrade_channel | `string` | upgrade channel (default: `"default"`)
 auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
 
 ```json
@@ -358,20 +358,20 @@ it is highly recommended to keep relays up to date.
 
 When `auto_upgrade` is set to `true` or not present in the relay
 `config.json`, the relay will attempt automatic upgrades whenever it
-receives an update notification from the directory during heartbeat on
-the update channel specified in the enrollment config. If an upgrade
+receives an upgrade notification from the directory during heartbeat on
+the upgrade channel specified in the enrollment config. If an upgrade
 fails, a best-effort rollback is performed and the affected version is
 skipped.
 
-The relay update channels supported by the directory and the respective
-latest version is exposed via the directory's `/info` endpoint.
+The relay upgrade channels supported by the directory and the respective
+latest versions are exposed via the directory's `/info` endpoint.
 
 ```json
 {
     "auto_upgrade": true,
     "contracts": {
         "https://contract1.example.com": {
-            "update_channel": "default"
+            "upgrade_channel": "default"
         }
     }
 }
