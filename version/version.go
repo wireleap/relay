@@ -81,9 +81,9 @@ func LatestChannelVersion(f fsdir.T) (semver.Version, error) {
 	if err != nil {
 		return semver.Version{}, err
 	}
-	v, ok := dinfo.Channels[sccfg.Channel]
+	v, ok := dinfo.UpgradeChannels.Relay[sccfg.UpgradeChannel]
 	if !ok {
-		return v, fmt.Errorf("no version for channel '%s' is provided by directory", sccfg.Channel)
+		return v, fmt.Errorf("no version for channel '%s' is provided by directory", sccfg.UpgradeChannel)
 	}
 	return v, nil
 }
