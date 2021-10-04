@@ -49,7 +49,24 @@ func PostRollbackHook(f fsdir.T) (err error) {
 }
 
 // MIGRATIONS is the slice of versioned migrations.
-var MIGRATIONS = []*upgrade.Migration{}
+var MIGRATIONS = []*upgrade.Migration{{
+	Name:    "upgrade_channel",
+	Version: semver.MustParse("0.5.0"),
+	Apply: func(f fsdir.T) error {
+		c := relaycfg.Defaults()
+		if err := f.Get(&c, "config.json.next"); err != nil {
+			return fmt.Errorf("could not load config.json.next: %s", err)
+		}
+		for _, re := range c.Contracts {
+			re.UpgradeChannel = re.Channel
+			re.Channel = ""
+		}
+		if err := f.Set(&c, "config.json.next"); err != nil {
+			return fmt.Errorf("could not save config.json.next: %s", err)
+		}
+		return nil
+	},
+}}
 
 // LatestChannelVersion is a special function for wireleap-relay which will
 // obtain the latest version supported by the currently configured update
