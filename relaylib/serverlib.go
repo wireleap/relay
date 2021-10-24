@@ -94,7 +94,6 @@ func EnrollRelay(c *relaycfg.C, cl *client.Client, u *upgrade.Config) (final fun
 			return
 		}
 
-		auth.SetHeader(req.Header, auth.API, auth.Version, "")
 		auth.SetHeader(req.Header, auth.Relay, auth.Version, version.VERSION_STRING)
 
 		if _, err = relaydir.EnrollHandshake(cl, req); err != nil {
@@ -105,6 +104,10 @@ func EnrollRelay(c *relaycfg.C, cl *client.Client, u *upgrade.Config) (final fun
 			)
 			return
 		}
+
+		// do not enforce protocol compatibility for subsequent heartbeats
+		// NOTE: this is important for old relays upgrading on new dir heartbeat
+		auth.DelHeader(req.Header, relaydir.T.String(), auth.Version)
 
 		requests = append(requests, req)
 		log.Printf("Enrolled successfully as %s relay into %s", d.Role, sc)
