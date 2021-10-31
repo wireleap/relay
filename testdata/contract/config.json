@@ -1,0 +1,37 @@
+{
+  "endpoint": "http://wireleap-contract:8080",
+  "address": "0.0.0.0:8080",
+  "ledger_file": "transactions.ledger",
+  "archive_dir": "archive",
+  "proof_of_funding": [
+    {
+      "type": "dummy",
+      "pubkey": "Zm9vCg"
+    }
+  ],
+  "payout": {
+    "endpoint": "http://ps-dummy:12345/withdrawals",
+    "type": "dummy",
+    "info": "https://test.wireleap.com/",
+    "min_withdrawal": 5,
+    "max_withdrawal": 100
+  },
+  "servicekey": {
+    "value": "1000",
+    "currency": "usd",
+    "duration": "10m"
+  },
+  "settlement": {
+    "fee_percent": "5",
+    "submission_window": "1h"
+  },
+  "directory": {
+    "endpoint": "http://wireleap-dir:8081/"
+  },
+  "metadata": {
+    "operator": "Example Inc.",
+    "name": "Example Contract",
+    "terms_of_service": "https://contract1.example.com/tos",
+    "privacy_policy": "https://contract1.example.com/privacy"
+  }
+}
