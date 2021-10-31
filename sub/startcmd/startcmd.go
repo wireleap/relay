@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/wireleap/common/api/client"
-	"github.com/wireleap/common/api/consume"
 	"github.com/wireleap/common/api/interfaces/relaycontract"
 	"github.com/wireleap/common/api/interfaces/relaydir"
 	"github.com/wireleap/common/api/jsonb"
@@ -22,13 +21,13 @@ import (
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/commonsub/startcmd"
 	"github.com/wireleap/common/cli/fsdir"
-	"github.com/wireleap/common/cli/upgrade"
 	"github.com/wireleap/common/ststore"
-	"github.com/wireleap/common/wlnet/relay"
 	"github.com/wireleap/common/wlnet/transport"
+	"github.com/wireleap/relay/contractmanager"
 	"github.com/wireleap/relay/filenames"
 	"github.com/wireleap/relay/relaycfg"
 	"github.com/wireleap/relay/relaylib"
+	"github.com/wireleap/relay/wlnet/relay"
 )
 
 func Cmd() *cli.Subcmd { return startcmd.Cmd("wireleap-relay", serverun) }
@@ -54,24 +53,26 @@ func serverun(fm fsdir.T) {
 	cl := client.New(signer.New(privkey), relaydir.T, relaycontract.T)
 
 	// load store
-	sts, err := ststore.New(fm.Path(filenames.Sharetokens), ststore.RelayKeyFunc)
+	var sts *ststore.T
+	sts, err = ststore.New(fm.Path(filenames.Sharetokens), ststore.RelayKeyFunc)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	scs := map[string]string{}
+	// define netstack sharetoken handler
+	pk := privkey.Public().(ed25519.PublicKey)
 
-	for u, _ := range c.Contracts {
-		// pubkey
-		pk, err := consume.ContractPubkey(cl, &u)
+	// initialise the relay manager
+	var manager *contractmanager.Manager
+	manager, err = contractmanager.NewManager(fm, &c, jsonb.PK(pk).String(), cl)
+	// misses upgrade.NewConfig(fm, "wireleap-relay", false)
 
-		if err != nil {
-			log.Fatalf("could not get pubkey for %s: %s", u.String(), err)
-		}
-
-		scs[base64.RawURLEncoding.EncodeToString(pk)] = u.String()
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	scs := manager.Controller.SCS()
 
 	creds, err := tls.LoadX509KeyPair(
 		fm.Path(filenames.TLSCert),
@@ -81,9 +82,6 @@ func serverun(fm fsdir.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// define netstack sharetoken handler
-	pk := privkey.Public().(ed25519.PublicKey)
 
 	verifyST := func(st *sharetoken.T) error {
 		if !bytes.Equal(st.RelayPubkey, pk) {
@@ -235,7 +233,7 @@ func serverun(fm fsdir.T) {
 		Timeout:   time.Duration(c.Timeout),
 	})
 
-	r := relay.New(n, relay.Options{
+	r := relay.New(n, manager, relay.Options{
 		MaxTime:       time.Duration(c.MaxTime),
 		BufSize:       c.BufSize,
 		HandleST:      handleST,
@@ -251,18 +249,16 @@ func serverun(fm fsdir.T) {
 	log.Printf("Listening for H/2 requests on https://%s", *c.Address)
 
 	// finalizer
-	var final func()
-	final, err = relaylib.EnrollRelay(&c, cl, upgrade.NewConfig(fm, "wireleap-relay", false))
-
-	if err != nil {
+	if err := r.Manager.Start(); err != nil {
 		// finalizer is valid and needs to run even if there was an error
-		final()
+		r.Manager.Stop()
 		log.Fatal(err)
 	}
 
 	shutdown := func() bool {
 		log.Print("gracefully shutting down...")
-		final()
+		r.Manager.Stop()
+
 		fm.Del(filenames.Pid)
 		return true
 	}
@@ -291,8 +287,24 @@ func serverun(fm fsdir.T) {
 
 			if err != nil {
 				log.Printf("could not reload sharetoken store: %s, keeping old store...", err)
+				return
 			}
 
+			// reload config file
+			c := relaycfg.Defaults()
+			if err = fm.Get(&c, filenames.Config); err != nil {
+				log.Printf("could not load config file %s: %s", fm.Path(filenames.Config), err)
+			} else if err = c.Validate(); err != nil {
+				log.Printf("could not validate config file: %s", err)
+			} else if err = r.Manager.ReloadCfg(&c); err != nil {
+				log.Printf("could not reload relay config: %s", err)
+			}
+
+			return
+		},
+		syscall.SIGUSR2: func() (_ bool) {
+			log.Println("current status")
+			r.Manager.PrintStatus()
 			return
 		},
 		syscall.SIGINT:  shutdown,
