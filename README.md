@@ -1,10 +1,11 @@
 # Wireleap relay
 
-[Wireleap](https://wireleap.com) is a public interest technology with
-the goal of enabling more access to knowledge and resources on the
-Internet for more people, no matter where they are. Our mission is to
-positively impact peoples lives, advance the public interest and benefit
-the common good.
+[Wireleap](https://wireleap.com) is a decentralized communications protocol
+and open-source software designed with the goal of providing unrestricted
+access to the internet from anywhere.
+
+The Wireleap relay software is used to relay Wireleap protocol traffic from
+clients and other relays.
 
 This repository is for the Wireleap relay.
 
