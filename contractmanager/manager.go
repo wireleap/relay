@@ -49,7 +49,7 @@ func NewManager(fm fsdir.T, c *relaycfg.C, pubkey string, cl *client.Client) (m 
 	callback := make(chan *status.T)
 	controller := relaylib.NewController(cl, callback)
 
-	if err = controller.Load(c); err != nil { // WIP
+	if err = controller.Load(c); err != nil {
 		return
 	}
 
