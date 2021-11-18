@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -59,6 +60,9 @@ func tmpFolder(t *testing.T) (string, fsdir.T, error) {
 }
 
 func TestController(t *testing.T) {
+	// Disable paralellism
+	runtime.GOMAXPROCS(1)
+
 	_, fm, err := tmpFolder(t)
 
 	if err != nil {
@@ -127,7 +131,7 @@ func TestController(t *testing.T) {
 	})
 
 	t.Run("TestStart", func(t *testing.T) {
-		// Test starting the controller
+		// Test starting the contract manager
 		t.Run("startOk", func(t *testing.T) {
 			err := m.Start()
 
@@ -152,7 +156,7 @@ func TestController(t *testing.T) {
 	})
 
 	t.Run("TestStop", func(t *testing.T) {
-		// Test stopping the controller
+		// Test stopping the contract manager
 		t.Run("stopOk", func(t *testing.T) {
 			m.Stop() // Stop panics on failure
 		})
