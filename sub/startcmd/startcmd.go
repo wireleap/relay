@@ -66,7 +66,6 @@ func serverun(fm fsdir.T) {
 	// initialise the relay manager
 	var manager *contractmanager.Manager
 	manager, err = contractmanager.NewManager(fm, &c, jsonb.PK(pk).String(), cl)
-	// misses upgrade.NewConfig(fm, "wireleap-relay", false)
 
 	if err != nil {
 		log.Fatal(err)
