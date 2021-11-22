@@ -163,5 +163,12 @@ func TestController(t *testing.T) {
 			m.Stop() // Stop panics on failure
 		})
 	})
+
+	t.Run("TestStopDup", func(t *testing.T) {
+		// Test stopping the contract manager
+		t.Run("stopFail", func(t *testing.T) {
+			m.Stop() // Stop panics on failure
+		})
+	})
 }
 **/
