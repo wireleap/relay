@@ -6,6 +6,7 @@ package relaylib
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -110,7 +111,7 @@ func TestController(t *testing.T) {
 		t.Run("startFail", func(t *testing.T) {
 			err := c.Start()
 
-			if err == nil {
+			if !errors.Is(err, ErrAlreadyStarted) {
 				t.Fatal("Controller already started, should return an error")
 			}
 		})
@@ -180,7 +181,7 @@ func TestController(t *testing.T) {
 		t.Run("denyConnection", func(t *testing.T) {
 			_, err := c.NewConn(contractId)
 
-			if err == nil {
+			if !errors.Is(err, ErrContractNotAvailable) {
 				t.Fatal(err)
 			}
 		})
@@ -195,8 +196,8 @@ func TestController(t *testing.T) {
 			if _, ok := status[contractId]; !ok {
 				t.Fatal("Relay should be listed")
 			} //else if !s.Flags.NetCapReached {
-			  //t.Fatal("Relay should be disabled")
-		 //}
+			//t.Fatal("Relay should be disabled")
+			//}
 		})
 
 		t.Run("enroll", func(t *testing.T) {
@@ -215,7 +216,7 @@ func TestController(t *testing.T) {
 			} else if !s.Flags.Enrolled {
 				t.Fatal("Relay should be enrolled")
 			} //else if s.Flags.NetCapReached {
-				//t.Fatal("Relay should be enabled")
+			//t.Fatal("Relay should be enabled")
 			//}
 		})
 	})
@@ -236,7 +237,7 @@ func TestController(t *testing.T) {
 		t.Run("disenroll", func(t *testing.T) {
 			err := c.Disenroll("unknownContract")
 
-			if err == nil {
+			if !errors.Is(err, ErrContractNotFound) {
 				t.Fatal("Contract should be unknown")
 			}
 		})
@@ -244,7 +245,7 @@ func TestController(t *testing.T) {
 		t.Run("enroll", func(t *testing.T) {
 			err := c.Enroll("unknownContract")
 
-			if err == nil {
+			if !errors.Is(err, ErrContractNotFound) {
 				t.Fatal("Contract should be unknown")
 			}
 		})
@@ -252,7 +253,7 @@ func TestController(t *testing.T) {
 		t.Run("denyConnection", func(t *testing.T) {
 			_, err := c.NewConn("unknownContract")
 
-			if err == nil {
+			if !errors.Is(err, ErrContractNotFound) {
 				t.Fatal(err)
 			}
 		})
@@ -331,7 +332,7 @@ func TestController(t *testing.T) {
 		t.Run("stopFail", func(t *testing.T) {
 			err := c.Stop()
 
-			if err == nil {
+			if !errors.Is(err, ErrNotStarted) {
 				t.Fatal("Controller already stoppped, should return an error")
 			}
 		})
@@ -339,7 +340,7 @@ func TestController(t *testing.T) {
 		t.Run("denyConnection", func(t *testing.T) {
 			_, err := c.NewConn(contractId)
 
-			if err == nil {
+			if !errors.Is(err, ErrNotStarted) {
 				t.Fatal(err)
 			}
 		})
@@ -350,7 +351,7 @@ func TestController(t *testing.T) {
 		t.Run("enroll", func(t *testing.T) {
 			err := c.Enroll(contractId)
 
-			if err == nil {
+			if !errors.Is(err, ErrNotStarted) {
 				t.Fatal("Controller should be stopped")
 			}
 		})
@@ -358,7 +359,7 @@ func TestController(t *testing.T) {
 		t.Run("enrollAll", func(t *testing.T) {
 			err := c.EnrollAll()
 
-			if err == nil {
+			if !errors.Is(err, ErrNotStarted) {
 				t.Fatal("Controller should be stopped")
 			}
 		})
@@ -366,7 +367,7 @@ func TestController(t *testing.T) {
 		t.Run("disenroll", func(t *testing.T) {
 			err := c.Disenroll(contractId)
 
-			if err == nil {
+			if !errors.Is(err, ErrNotStarted) {
 				t.Fatal("Controller should be stopped")
 			}
 		})
@@ -374,7 +375,7 @@ func TestController(t *testing.T) {
 		t.Run("disenrollAll", func(t *testing.T) {
 			err := c.DisenrollAll()
 
-			if err == nil {
+			if !errors.Is(err, ErrNotStarted) {
 				t.Fatal("Controller should be stopped")
 			}
 		})
@@ -399,7 +400,7 @@ func TestController(t *testing.T) {
 		t.Run("startFail", func(t *testing.T) {
 			err := c.Start()
 
-			if err == nil {
+			if !errors.Is(err, ErrAlreadyStarted) {
 				t.Fatal("Controller already started, should return an error")
 			}
 		})
@@ -471,7 +472,7 @@ func TestController(t *testing.T) {
 		t.Run("failRemove", func(t *testing.T) {
 			err := c.remove(contractId)
 
-			if err == nil {
+			if !errors.Is(err, ErrContractNotFound) {
 				t.Fatal("Relay should be already removed")
 			}
 		})
@@ -479,7 +480,7 @@ func TestController(t *testing.T) {
 		t.Run("failReload", func(t *testing.T) {
 			err := c.update(contractId, &re)
 
-			if err == nil {
+			if !errors.Is(err, ErrContractNotFound) {
 				t.Fatal("Relay should be already removed")
 			}
 		})

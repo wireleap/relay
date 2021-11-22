@@ -18,11 +18,16 @@ import (
 )
 
 const (
-	errNotStarted           = "controller not started"
-	errAlreadyStarted       = "controller already started"
-	errContractNotFound     = "relay contract not found: %s"
-	errContractNotAvailable = "relay contract not available: %s"
-	beatInterval            = 5 * time.Minute
+	errTmpl      = "%w: %s"
+	beatInterval = 5 * time.Minute
+)
+
+var (
+	ErrNotStarted           = errors.New("controller not started")
+	ErrAlreadyStarted       = errors.New("controller already started")
+	ErrContractNotFound     = errors.New("relay contract not found")
+	ErrContractNotAvailable = errors.New("relay contract not available")
+	ErrDisenroll            = errors.New("disenrollment patially failed, couldn't disenroll the following contracts")
 )
 
 // Controller is the serverlib relay handler
@@ -61,7 +66,7 @@ func (c *Controller) add(scurl texturl.URL, cfg *relayentry.T) (contractId strin
 // Fresh relay in the controller
 func (c *Controller) update(contractId string, cfg *relayentry.T) (err error) {
 	if rs, ok := c.relays[contractId]; !ok {
-		err = fmt.Errorf(errContractNotFound, contractId)
+		err = fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
 	} else if err = rs.Reload(cfg); err != nil {
 		// pass
 	} else if c.hbt != nil && rs.status.Enrolled {
@@ -74,7 +79,7 @@ func (c *Controller) update(contractId string, cfg *relayentry.T) (err error) {
 // Remove relay from the controller
 func (c *Controller) remove(contractId string) (err error) {
 	if rs, ok := c.relays[contractId]; !ok {
-		err = fmt.Errorf(errContractNotFound, contractId)
+		err = fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
 	} else if c.hbt != nil {
 		if rs.status.Enrolled {
 			// relay only needs to be disenrolled if the controller is started
@@ -174,20 +179,20 @@ func (c *Controller) Reload(scfg *relaycfg.C) (err error) {
 // Enroll relay by contractId
 func (c *Controller) Enroll(contractId string) error {
 	if c.hbt == nil {
-		return errors.New(errNotStarted)
+		return ErrNotStarted
 	}
 
 	if rs, ok := c.relays[contractId]; ok {
 		return c.enroll(rs)
 	} else {
-		return fmt.Errorf(errContractNotFound, contractId)
+		return fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
 	}
 }
 
 // Enroll all the relays
 func (c *Controller) EnrollAll() (err error) {
 	if c.hbt == nil {
-		return errors.New(errNotStarted)
+		return ErrNotStarted
 	}
 
 	for _, rs := range c.relays {
@@ -201,22 +206,22 @@ func (c *Controller) EnrollAll() (err error) {
 }
 
 // Disenroll relay by contractId
-func (c *Controller) Disenroll(contractid string) error {
+func (c *Controller) Disenroll(contractId string) error {
 	if c.hbt == nil {
-		return errors.New(errNotStarted)
+		return ErrNotStarted
 	}
 
-	if rs, ok := c.relays[contractid]; ok {
+	if rs, ok := c.relays[contractId]; ok {
 		return c.disenroll(rs)
 	} else {
-		return fmt.Errorf(errContractNotFound, contractid)
+		return fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
 	}
 }
 
 // Disenroll all the relays
 func (c *Controller) DisenrollAll() (err error) {
 	if c.hbt == nil {
-		return errors.New(errNotStarted)
+		return ErrNotStarted
 	}
 
 	for _, rs := range c.relays {
@@ -230,16 +235,16 @@ func (c *Controller) DisenrollAll() (err error) {
 }
 
 // Disenroll relay by contractId
-func (c *Controller) Disable(contractid string) error {
+func (c *Controller) Disable(contractId string) error {
 	if c.hbt == nil {
-		return errors.New(errNotStarted)
+		return ErrNotStarted
 	}
 
-	if rs, ok := c.relays[contractid]; ok {
+	if rs, ok := c.relays[contractId]; ok {
 		c.disable(rs)
 		return nil
 	} else {
-		return fmt.Errorf(errContractNotFound, contractid)
+		return fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
 	}
 }
 
@@ -253,13 +258,13 @@ func (c *Controller) Start() error {
 // Enrolls relays and starts heartbeat goroutine
 func (c *Controller) StartWithList(contractIds ...string) error {
 	if c.hbt != nil {
-		return fmt.Errorf(errAlreadyStarted)
+		return ErrAlreadyStarted
 	}
 
 	// enroll relays
 	for _, contractId := range contractIds {
 		if rs, ok := c.relays[contractId]; !ok {
-			return fmt.Errorf(errContractNotFound, contractId)
+			return fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
 		} else if rs.Status().Flags.Enrolled {
 			// skipping relay already enrolled
 		} else if err := c.enroll(rs); err != nil {
@@ -307,7 +312,7 @@ func (c *Controller) Stop() error {
 		c.hbt.Stop()
 		c.hbt = nil
 	} else {
-		return errors.New("controller not started")
+		return ErrNotStarted
 	}
 
 	erroredRelays := []string{}
@@ -320,7 +325,7 @@ func (c *Controller) Stop() error {
 	}
 
 	if len(erroredRelays) != 0 {
-		return fmt.Errorf("disenrollment patially failed, couldn't disenroll the following contracts: %v", erroredRelays)
+		return fmt.Errorf(errTmpl, ErrDisenroll, fmt.Sprintf("%v", erroredRelays))
 	}
 	return nil
 }
@@ -334,11 +339,11 @@ func (c *Controller) Started() bool {
 // Relays accept new connections meanwhile they're enrolled
 func (c *Controller) NewConn(contractId string) (ctx context.Context, err error) {
 	if c.hbt == nil {
-		err = fmt.Errorf(errNotStarted)
+		err = ErrNotStarted
 	} else if rs, ok := c.relays[contractId]; !ok {
-		err = fmt.Errorf(errContractNotFound, contractId)
+		err = fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
 	} else if !rs.Status().Flags.Enrolled {
-		err = fmt.Errorf(errContractNotAvailable, contractId)
+		err = fmt.Errorf(errTmpl, ErrContractNotAvailable, contractId)
 	} else {
 		ctx = rs.Context()
 	}
