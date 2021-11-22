@@ -4,6 +4,7 @@ package relaylib
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,6 +25,12 @@ import (
 
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/relay/version"
+)
+
+var (
+	ErrFetchDirUrl = errors.New("could not get directory URL")
+	ErrRequest     = errors.New("could not create enrollment request")
+	ErrReloadCfg   = errors.New("forbidden change, could not apply new relay config")
 )
 
 // relayStatus handles the relay status for a cetain contract
@@ -88,7 +95,7 @@ func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentry.T) (rs
 	dirinfo, err = consume.DirectoryData(cl, &scurl)
 
 	if err != nil {
-		err = fmt.Errorf("could not get directory URL for %s: %s", sc, err)
+		err = fmt.Errorf("%w for %s: %s", ErrFetchDirUrl, sc, err)
 		return
 	}
 
@@ -96,7 +103,7 @@ func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentry.T) (rs
 	dirurl := dirinfo.Endpoint.String()
 
 	if _, err = cl.NewRequest(http.MethodPost, dirurl, d); err != nil {
-		err = fmt.Errorf("could not create enrollment request for directory %s: %w", dirurl, err)
+		err = fmt.Errorf("%w for directory %s: %s", ErrRequest, dirurl, err)
 		return
 	}
 
@@ -114,7 +121,7 @@ func (rs *relayStatus) Reload(cfg *relayentry.T) (err error) {
 	if err = cfg.Validate(); err != nil {
 		return
 	} else if rs.Relay.Role != cfg.Role {
-		err = fmt.Errorf("forbidden change, could not apply new relay config: %s", rs.rdUrl)
+		err = fmt.Errorf(errTmpl, ErrReloadCfg, rs.rdUrl)
 		return
 	}
 

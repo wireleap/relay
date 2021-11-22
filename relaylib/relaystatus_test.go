@@ -245,7 +245,7 @@ func TestRelay(t *testing.T) {
 				Versions: versions,
 			}
 
-			if err := rs.Reload(&rx); err == nil {
+			if err := rs.Reload(&rx); !errors.Is(err, ErrReloadCfg) {
 				t.Fatal("reload should have failed")
 			}
 
