@@ -6,6 +6,7 @@ package contractmanager
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -31,6 +32,7 @@ import (
 	"github.com/wireleap/dir/dir"
 	"github.com/wireleap/dir/dirlib"
 	"github.com/wireleap/relay/relaycfg"
+	"github.com/wireleap/relay/relaylib"
 	"github.com/wireleap/relay/version"
 )
 
@@ -149,7 +151,7 @@ func TestController(t *testing.T) {
 		t.Run("startFail", func(t *testing.T) {
 			err := m.Controller.Start()
 
-			if err == nil {
+			if !errors.Is(err, relaylib.ErrAlreadyStarted) {
 				t.Fatal("Controller already started, should return an error")
 			}
 		})
