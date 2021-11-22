@@ -18,6 +18,8 @@ import (
 	"log"
 )
 
+var ErrMissingConf = errors.New("missing configuration: wireleap:// listening is not enabled")
+
 // Contract Manager Status
 type managerStatus struct {
 	ControllerStarted bool
@@ -43,7 +45,7 @@ type Manager struct {
 
 func NewManager(fm fsdir.T, c *relaycfg.C, pubkey string, cl *client.Client) (m *Manager, err error) {
 	if c.Address == nil {
-		return nil, errors.New("missing configuration: wireleap:// listening is not enabled")
+		return nil, ErrMissingConf
 	}
 
 	callback := make(chan *status.T)
@@ -101,7 +103,7 @@ func (m *Manager) Stop() {
 
 func (m *Manager) ReloadCfg(c *relaycfg.C) (err error) {
 	if c.Address == nil {
-		return errors.New("missing configuration: wireleap:// listening is not enabled")
+		return ErrMissingConf
 	}
 
 	return m.Controller.Reload(c)
