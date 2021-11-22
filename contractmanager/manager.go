@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 )
 
 var ErrMissingConf = errors.New("missing configuration: wireleap:// listening is not enabled")
@@ -41,6 +42,7 @@ type Manager struct {
 	upgradecfg  *upgrade.Config
 	upgradechan chan *status.T
 	fm          fsdir.T
+	stopOnce    sync.Once
 }
 
 func NewManager(fm fsdir.T, c *relaycfg.C, pubkey string, cl *client.Client) (m *Manager, err error) {
@@ -92,7 +94,11 @@ func (m *Manager) Stop() {
 	}
 
 	// Close upgrade channel
-	close(m.upgradechan)
+	m.stopOnce.Do(
+		func() {
+			close(m.upgradechan)
+		},
+	)
 
 	if r != nil {
 		log.Println("back to panicking!")
