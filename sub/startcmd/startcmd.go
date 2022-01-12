@@ -27,6 +27,7 @@ import (
 	"github.com/wireleap/relay/filenames"
 	"github.com/wireleap/relay/relaycfg"
 	"github.com/wireleap/relay/relaylib"
+	"github.com/wireleap/relay/stscheduler"
 	"github.com/wireleap/relay/wlnet/relay"
 )
 
@@ -82,6 +83,66 @@ func serverun(fm fsdir.T) {
 		log.Fatal(err)
 	}
 
+	var stc *stscheduler.T
+
+	if time.Duration(c.AutoSubmitInterval).Nanoseconds() > 0 {
+		// set up archive if required
+		var (
+			archive   *ststore.T
+			archiveST func(*sharetoken.T) error
+		)
+
+		if c.ArchiveDir != nil {
+			archive, err = ststore.New(fm.Path(*c.ArchiveDir), ststore.RelayKeyFunc)
+
+			if err != nil {
+				log.Fatalf("could not initialize sharetoken archive: %s", err)
+			}
+
+			archiveST = func(st *sharetoken.T) error { return archive.Add(st) }
+		}
+
+		// configure scheduled submission
+
+		stc = stscheduler.New(time.Duration(c.AutoSubmitInterval), func(st *sharetoken.T) error {
+			var (
+				pk    = st.Contract.PublicKey.String()
+				u, ok = scs[pk]
+			)
+			if !ok {
+				return fmt.Errorf("cannot submit sharetoken to unknown SC %s", pk)
+			}
+			if err := relaylib.SubmitST(cl, u+"/submit", st); err != nil {
+				return err
+			}
+			// succesfully submitted, can be archived
+			// those are not submission failures and can be just logged
+			if archiveST != nil {
+				if err = archiveST(st); err != nil {
+					log.Printf(
+						"could not archive sharetoken (sig=%s): %s, keeping it in store",
+						st.Signature,
+						err,
+					)
+					return nil
+				}
+			}
+			if err = sts.Del(st); err != nil {
+				log.Printf(
+					"could not clean up submitted sharetoken (sig=%s): %s, keeping it in store",
+					st.Signature,
+					err,
+				)
+			}
+			return nil
+		})
+
+		// schedule tokens in store for submission on startup
+		for _, st := range sts.Filter("", "") {
+			stc.Schedule(st)
+		}
+	}
+
 	verifyST := func(st *sharetoken.T) error {
 		if !bytes.Equal(st.RelayPubkey, pk) {
 			return fmt.Errorf(
@@ -104,124 +165,15 @@ func serverun(fm fsdir.T) {
 		return st.Verify()
 	}
 
-	var scheduleSubmit func(*sharetoken.T) error
-
-	if time.Duration(c.AutoSubmitInterval).Nanoseconds() > 0 {
-		// set up archive if required
-		var (
-			archive   *ststore.T
-			archiveST func(*sharetoken.T) error
-
-			submit = func(st *sharetoken.T) error {
-				var (
-					pk    = st.Contract.PublicKey.String()
-					u, ok = scs[pk]
-				)
-
-				if !ok {
-					return fmt.Errorf("cannot submit sharetoken to unknown SC %s", pk)
-				}
-
-				return relaylib.SubmitST(cl, u+"/submit", st)
-			}
-		)
-
-		if c.ArchiveDir != nil {
-			archive, err = ststore.New(fm.Path(*c.ArchiveDir), ststore.RelayKeyFunc)
-
-			if err != nil {
-				log.Fatalf("could not initialize sharetoken archive: %s", err)
-			}
-
-			archiveST = func(st *sharetoken.T) error { return archive.Add(st) }
-		}
-
-		scheduleSubmit = func(st *sharetoken.T) error {
-			var (
-				submitWhen = time.Unix(st.Contract.SettlementOpen+1, 0)
-				schedule   func(time.Time) // declaration for recursion
-			)
-
-			if time.Now().After(submitWhen) {
-				// if already expired, submit right away
-				return submit(st)
-			}
-
-			schedule = func(t time.Time) {
-				log.Printf(
-					"scheduling sharetoken (sig=%s) submission for %s",
-					st.Signature,
-					t,
-				)
-
-				// async -- cannot return error from the future
-				time.AfterFunc(time.Until(t), func() {
-					err := submit(st)
-
-					if err != nil {
-						log.Printf(
-							"could not submit sharetoken (sig=%s): %s",
-							st.Signature,
-							err,
-						)
-
-						// try again later
-						schedule(t.Add(time.Duration(c.AutoSubmitInterval)))
-						return
-					}
-
-					// succesfully submitted, can be archived
-					if archiveST != nil {
-						err = archiveST(st)
-
-						if err != nil {
-							log.Printf(
-								"could not archive sharetoken: %s, keeping it in store",
-								err,
-							)
-							return
-						}
-					}
-
-					err = sts.Del(st)
-
-					if err != nil {
-						log.Printf(
-							"could not clean up submitted sharetoken: %s, keeping it in store",
-							err,
-						)
-					}
-				})
-			}
-
-			schedule(submitWhen)
-			return nil
-		}
-
-		// try to autosubmit tokens in store on startup
-		for _, st := range sts.Filter("", "") {
-			err = scheduleSubmit(st)
-
-			if err != nil {
-				log.Printf(
-					"error while scheduling stored sharetoken submission: %s",
-					err,
-				)
-			}
-		}
-	}
-
 	handleST := func(st *sharetoken.T) (err error) {
-		err = verifyST(st)
-		if err != nil {
+		if err = verifyST(st); err != nil {
 			return
 		}
-		err = sts.Add(st)
-		if err != nil {
+		if err = sts.Add(st); err != nil {
 			return
 		}
-		if scheduleSubmit != nil {
-			err = scheduleSubmit(st)
+		if stc != nil {
+			stc.Schedule(st)
 		}
 		return
 	}
