@@ -60,10 +60,6 @@ func New(dur time.Duration, submit func(*sharetoken.T) error) (t *T) {
 				}
 			}
 			t.mu.Unlock()
-
-			if n > 0 {
-				log.Printf("sharetoken scheduler submitted %d sharetokens this tick", n)
-			}
 		}
 	}()
 	log.Printf(
