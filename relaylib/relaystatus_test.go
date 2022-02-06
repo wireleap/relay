@@ -21,7 +21,6 @@ import (
 	"github.com/wireleap/common/api/interfaces/relayrelay"
 	"github.com/wireleap/common/api/jsonb"
 	"github.com/wireleap/common/api/provide"
-
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/signer"
 	"github.com/wireleap/common/api/texturl"
@@ -29,6 +28,7 @@ import (
 	"github.com/wireleap/contract/handlers/info"
 	"github.com/wireleap/dir/dir"
 	"github.com/wireleap/dir/dirlib"
+	"github.com/wireleap/relay/api/relayentryext"
 	"github.com/wireleap/relay/version"
 )
 
@@ -72,11 +72,13 @@ func TestRelay(t *testing.T) {
 		RelayContract: &relaycontract.T.Version,
 	}
 
-	re := relayentry.T{
-		Role:     "backing",
-		Addr:     addr,
-		Pubkey:   jsonb.PK(pub),
-		Versions: versions,
+	re := relayentryext.T{
+		T: relayentry.T{
+			Role:     "backing",
+			Addr:     addr,
+			Pubkey:   jsonb.PK(pub),
+			Versions: versions,
+		},
 	}
 
 	dh := testHandler(d, pub, priv, &test_cfg.T)
@@ -197,12 +199,14 @@ func TestRelay(t *testing.T) {
 		// update ok
 		t.Run("reloadOK", func(t *testing.T) {
 
-			rx := relayentry.T{
-				Role:     "backing",
-				Addr:     addr,
-				Key:      "key1",
-				Pubkey:   jsonb.PK(pub),
-				Versions: versions,
+			rx := relayentryext.T{
+				T: relayentry.T{
+					Role:     "backing",
+					Addr:     addr,
+					Key:      "key1",
+					Pubkey:   jsonb.PK(pub),
+					Versions: versions,
+				},
 			}
 
 			if err := rs.Reload(&rx); err != nil {
@@ -218,12 +222,14 @@ func TestRelay(t *testing.T) {
 		t.Run("reloadFailOnValidate", func(t *testing.T) {
 			addrx := texturl.URLMustParse("ftp://localhost:1234")
 
-			rx := relayentry.T{
-				Role:     "backing",
-				Addr:     addrx,
-				Key:      "key2",
-				Pubkey:   jsonb.PK(pub),
-				Versions: versions,
+			rx := relayentryext.T{
+				T: relayentry.T{
+					Role:     "backing",
+					Addr:     addrx,
+					Key:      "key2",
+					Pubkey:   jsonb.PK(pub),
+					Versions: versions,
+				},
 			}
 
 			if err := rs.Reload(&rx); err == nil {
@@ -237,12 +243,15 @@ func TestRelay(t *testing.T) {
 
 		// wrong role
 		t.Run("reloadFailOnValidate", func(t *testing.T) {
-			rx := relayentry.T{
-				Role:     "fronting",
-				Addr:     addr,
-				Key:      "key3",
-				Pubkey:   jsonb.PK(pub),
-				Versions: versions,
+
+			rx := relayentryext.T{
+				T: relayentry.T{
+					Role:     "fronting",
+					Addr:     addr,
+					Key:      "key3",
+					Pubkey:   jsonb.PK(pub),
+					Versions: versions,
+				},
 			}
 
 			if err := rs.Reload(&rx); !errors.Is(err, ErrReloadCfg) {
@@ -288,11 +297,13 @@ func TestErrHandlers(t *testing.T) {
 		RelayContract: &relaycontract.T.Version,
 	}
 
-	re := relayentry.T{
-		Role:     "backing",
-		Addr:     addr,
-		Pubkey:   jsonb.PK(pub),
-		Versions: versions,
+	re := relayentryext.T{
+		T: relayentry.T{
+			Role:     "backing",
+			Addr:     addr,
+			Pubkey:   jsonb.PK(pub),
+			Versions: versions,
+		},
 	}
 
 	dh := testHandler(d, pub, priv, &test_cfg.T)

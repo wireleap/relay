@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/wireleap/common/api/duration"
-	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/texturl"
+	relayentry "github.com/wireleap/relay/api/relayentryext"
 )
 
 // C is the type of the config struct describing the config file format.
