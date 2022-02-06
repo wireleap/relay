@@ -12,12 +12,12 @@ import (
 	"github.com/wireleap/common/api/consume"
 	"github.com/wireleap/common/api/interfaces/relaycontract"
 	"github.com/wireleap/common/api/interfaces/relaydir"
-	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/signer"
 	"github.com/wireleap/common/api/texturl"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
+	relayentry "github.com/wireleap/relay/api/relayentryext"
 	"github.com/wireleap/relay/filenames"
 	"github.com/wireleap/relay/relaycfg"
 )

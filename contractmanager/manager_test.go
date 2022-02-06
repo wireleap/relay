@@ -31,6 +31,8 @@ import (
 	"github.com/wireleap/contract/handlers/info"
 	"github.com/wireleap/dir/dir"
 	"github.com/wireleap/dir/dirlib"
+
+	"github.com/wireleap/relay/api/relayentryext"
 	"github.com/wireleap/relay/relaycfg"
 	"github.com/wireleap/relay/relaylib"
 	"github.com/wireleap/relay/version"
@@ -102,18 +104,20 @@ func TestController(t *testing.T) {
 		RelayContract: &relaycontract.T.Version,
 	}
 
-	re := relayentry.T{
-		Role:     "backing",
-		Addr:     addr,
-		Pubkey:   jsonb.PK(pub),
-		Versions: versions,
+	re := relayentryext.T{
+		T: relayentry.T{
+			Role:     "backing",
+			Addr:     addr,
+			Pubkey:   jsonb.PK(pub),
+			Versions: versions,
+		},
 	}
 
 	dh := testHandler(d, pub, priv, &test_cfg.T)
 	cl := client.NewMock(signer.New(priv), dh, relaydir.T)
 
 	cfg := relaycfg.C{
-		Contracts: map[texturl.URL]*relayentry.T{
+		Contracts: map[texturl.URL]*relayentryext.T{
 			*test_cfg.T.Endpoint: &re,
 		},
 		Address: &saddr,

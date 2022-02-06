@@ -20,10 +20,11 @@ import (
 	"github.com/wireleap/common/api/interfaces/relaydir"
 	"github.com/wireleap/common/api/interfaces/relayrelay"
 	"github.com/wireleap/common/api/jsonb"
+	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/api/texturl"
 
-	"github.com/wireleap/common/api/relayentry"
+	"github.com/wireleap/relay/api/relayentryext"
 	"github.com/wireleap/relay/version"
 )
 
@@ -35,7 +36,7 @@ var (
 
 // relayStatus handles the relay status for a cetain contract
 type relayStatus struct {
-	Relay  *relayentry.T
+	Relay  *relayentryext.T
 	rdUrl  string
 	scUrl  string
 	lock   *sync.RWMutex
@@ -69,7 +70,7 @@ func (c ctx_) isNil() bool {
 	return c.Context == nil
 }
 
-func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentry.T) (rs relayStatus, err error) {
+func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentryext.T) (rs relayStatus, err error) {
 	sc := scurl.String()
 	if err = cfg.Validate(); err != nil {
 		return
@@ -83,12 +84,15 @@ func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentry.T) (rs
 		RelayContract: &relaycontract.T.Version,
 	}
 
-	d := &relayentry.T{
-		Addr:     cfg.Addr,
-		Role:     cfg.Role,
-		Key:      cfg.Key,
-		Versions: versions,
-		Pubkey:   jsonb.PK(cl.Public()),
+	d := &relayentryext.T{
+		T: relayentry.T{
+			Addr:     cfg.Addr,
+			Role:     cfg.Role,
+			Key:      cfg.Key,
+			Versions: versions,
+			Pubkey:   jsonb.PK(cl.Public()),
+		},
+		NetUsage: cfg.NetUsage,
 	}
 
 	dirinfo := &contractinfo.Directory{}
@@ -117,7 +121,7 @@ func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentry.T) (rs
 }
 
 // Reload RelayStatus Configuration
-func (rs *relayStatus) Reload(cfg *relayentry.T) (err error) {
+func (rs *relayStatus) Reload(cfg *relayentryext.T) (err error) {
 	if err = cfg.Validate(); err != nil {
 		return
 	} else if rs.Relay.Role != cfg.Role {
@@ -130,7 +134,7 @@ func (rs *relayStatus) Reload(cfg *relayentry.T) (err error) {
 	return
 }
 
-func newRSRequest(cl *client.Client, method, url string, d *relayentry.T, init bool) (req *http.Request, err error) {
+func newRSRequest(cl *client.Client, method, url string, d *relayentryext.T, init bool) (req *http.Request, err error) {
 	if req, err = cl.NewRequest(method, url, d); err != nil {
 		return
 	}

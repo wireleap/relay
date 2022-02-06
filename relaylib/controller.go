@@ -13,7 +13,7 @@ import (
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/api/texturl"
 
-	"github.com/wireleap/common/api/relayentry"
+	relayentry "github.com/wireleap/relay/api/relayentryext"
 	"github.com/wireleap/relay/relaycfg"
 )
 
