@@ -168,7 +168,7 @@ func (n netCapsCfg) Caps() (resCaps map[string]cap, resGlobal cap) {
 	contractCaps := n.contractCaps()
 
 	factorSoft := new(big.Float)
-	factorSoft.SetFloat64(netCapHardLimit)
+	factorSoft.SetFloat64(netCapSoftLimit)
 
 	factorHard := new(big.Float)
 	factorHard.SetFloat64(netCapHardLimit)
@@ -181,7 +181,7 @@ func (n netCapsCfg) Caps() (resCaps map[string]cap, resGlobal cap) {
 	resGlobal.soft, _ = globalSoftCap.Uint64()
 
 	globalHardCap := new(big.Float)
-	globalHardCap.Mul(globalCap, factorSoft)
+	globalHardCap.Mul(globalCap, factorHard)
 	resGlobal.hard, _ = globalHardCap.Uint64()
 
 	caps := make(map[string]*big.Float, len(contractCaps))
