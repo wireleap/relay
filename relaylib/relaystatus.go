@@ -94,7 +94,7 @@ func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentry.T) (rs
 	dirinfo := &contractinfo.Directory{}
 	dirinfo, err = consume.DirectoryData(cl, &scurl)
 
-	if err != nil {
+	if err != nil || dirinfo.Endpoint == nil {
 		err = fmt.Errorf("%w for %s: %s", ErrFetchDirUrl, sc, err)
 		return
 	}
