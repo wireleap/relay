@@ -62,8 +62,20 @@ func (c *C) Validate() error {
 		return errors.New("'contracts' have to be set")
 	}
 
+	seen := false
 	if len(c.Contracts) > 1 {
-		return errors.New("only 1 contract in 'contracts' is supported for now")
+		for _, c := range c.Contracts {
+			if c.UpgradeChannel != "" {
+				if seen {
+					return errors.New("only 1 contract in 'contracts' can have an 'upgrade_channel' field set")
+				} else {
+					seen = true
+				}
+			}
+		}
+		if !seen {
+			return errors.New("no contract in 'contracts' has an 'upgrade_channel' field set to watch for upgrades")
+		}
 	}
 
 	for k, v := range c.Contracts {
