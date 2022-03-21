@@ -4,5 +4,5 @@ go 1.16
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/wireleap/common v0.2.2
+	github.com/wireleap/common v0.3.3
 )
