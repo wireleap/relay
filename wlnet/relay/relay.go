@@ -3,6 +3,7 @@
 package relay
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -142,7 +143,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Dialing %s connection to %s", p.Protocol, shown)
-	c2, err := t.T.Transport.Dial(p.Protocol, p.Remote.Host)
+	c2, err := t.T.Transport.DialContext(context.TODO(), p.Protocol, p.Remote.Host)
 
 	if err != nil {
 		// TODO more granular errors
@@ -164,7 +165,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = wlnet.Splice(c, c2, t.MaxTime, t.BufSize)
+	err = wlnet.Splice(context.TODO(), c, c2, t.MaxTime, t.BufSize)
 
 	if err != nil {
 		// TODO more granular errors
