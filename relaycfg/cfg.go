@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Wireleap
+// Copyright (c) 2022 Wireleap
 
 // Package relaycfg describes the configuration file format and data types
 // used by wireleap-relay.
