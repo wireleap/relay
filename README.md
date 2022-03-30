@@ -18,6 +18,12 @@ This repository is for the Wireleap relay.
     - [Fronting relay configuration example](#fronting-relay-configuration-example)
     - [Apache configuration example](#apache-configuration-example)
     - [Nginx configuration example](#nginx-configuration-example)
+- [Network usage](#network-usage)
+    - [Network usage measurement](#network-usage-measurement)
+    - [Network cap](#network-cap)
+      - [Thresholds](#thresholds)
+    - [Network usage configuration example](#network-usage-configuration-example)
+- [POSIX signal hooks](#posix-signal-hooks)
 - [Testing](#testing)
 - [Production](#production)
     - [Increase ulimit](#increase-ulimit)
@@ -92,12 +98,17 @@ supported variables:
 Key | Type | Comment
 --- | ---- | -------
 address | `string` | address to bind to (`host:port`)
-archive_dir | `string` | path to archive submitted sharetokens (optional)
-auto_submit_interval | `string` | interval between sharetoken submission retries
+archive_dir | `string` | path to archive submitted sharetokens (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
+auto_submit_interval | `string` | interval between sharetoken submission retries (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
+network_usage.global_limit | `string` | maximum routed traffic in defined preriod (optional, [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings))
+network_usage.timeframe | `string` | routed traffic measurement fixed time window (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
+network_usage.write_interval | `string` | interval between telemetry autosaves (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
+network_usage.archive_dir | `string` | path of the archived statistics directory (optional)
 contracts.X | `string` | service contract endpoint url
 contracts.X.address | `string` | `wireleap://host:port[/uri]`
 contracts.X.role | `string` | `fronting` `entropic` `backing`
 contracts.X.key | `string` | `user:password` format enrollment key if required
+contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract (optional, [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings))
 contracts.X.upgrade_channel | `string` | upgrade channel (default: `"default"`)
 auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
 
@@ -106,6 +117,12 @@ auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
     "address": "0.0.0.0:13490",
     "archive_dir": "archive/sharetokens",
     "auto_submit_interval": "5m0s",
+    "network_usage": {
+        "global_limit": "2TB",
+        "timeframe": "30d",
+        "write_interval": "5m0s",
+        "archive_dir": "archive/netstats"
+    },
     "contracts": {
         "https://contract1.example.com": {
             "address": "wireleap://relay1.example.com:13490",
@@ -115,6 +132,11 @@ auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
         "https://contract2.example.com": {
             "address": "wireleap://relay1.example.com:13490",
             "role": "entropic"
+        },
+        "https://contract3.example.com": {
+            "address": "wireleap://relay1.example.com:13490",
+            "role": "entropic",
+            "network_usage_limit": "1TB"
         }
     }
 }
@@ -199,6 +221,144 @@ server {
     }
 }
 ```
+
+## Network usage
+
+Network usage feature enables the operators to monitor and limit the amount of
+data routed through the relay, and for each contract. This feature includes
+status storage accross application restarts and generates historical records of
+each period.
+
+### Network usage measurement
+
+Network traffic is a key and limited resource, just like CPU and RAM.
+Sadly, measuring accurately the used traffic at an application level on modern
+languages is not an easy task Currently the application records the size of the
+routed TCP streams. H/2, TCP, IP, and lower headers are not taken into account.
+
+Ignoring the H/2 headers, the remaining headers are: TCP (layer 4) and IP (layer
+3). Lower layers aren't taken into account because they belong to the local
+area network or physical point to point link scopes. In other words, they're
+not routed though the Internet.
+
+Each IP packet has a header and a payload. The payload is a TCP packet, which
+also has a header and a payload. The TCP payload is, overall, what we're
+currently capable of measuring.
+
+Depending on the length of the IP packets, the measured traffic value will
+deviate more or less from the real value. The IP packet length is as low as the
+contained payload and as big as the available MTU (Maximum, Transmision Unit);
+once hit the payload is sent on multiple IP packets, each one containing also
+a TCP header. The IPv4 header size is 20-24 bytes and the TCP one is 20 bytes.
+The network MTU usually is 1492-1500 bytes.
+
+For our calculations, we're taking the most common values:
+ - IP header: 20 bytes
+ - TCP header: 20 bytes
+ - MTU: 1492 bytes
+
+The only remaining variable is the `average packet length`, which depends
+directly on the the protocols and applications used by the client. Packet size
+distribution on computer networks is a quite common paper topic. Sadly, 1)
+there's no generic network usage or applications and 2) the nature of the usage
+evolves with the time. As a result, we only can take inspiration from those
+papers and guess.
+
+Fact 1: Small packets (100 bytes) are commonly used for signalisation purposes,
+audio streams or multiplayer video games.
+Fact 2: Big packages, hitting the MTU are used for heavy payloads requiring
+multiple packets.
+
+Guess: 30% of the packets are small, and 70% are big; the remaining sizes are
+marginal. Average packet size is ~1075 bytes, and measured traffic is 95.8%.
+
+| Avg pkt size (bytes) | Traffic measure accuracy    |
+| -------------------- | --------------------------- |
+| X                    | = (X - headers(IP+TCP)) / X |
+| 1500                 | 97.33%                      |
+| 1492                 | 97.32%                      |
+| 1300                 | 96.92%                      |
+| 1100                 | 96.36%                      |
+| 900                  | 95.56%                      |
+| 700                  | 94.29%                      |
+| 500                  | 92%                         |
+| 300                  | 86.67%                      |
+| 100                  | 60%                         |
+| 40                   | 0%                          |
+
+To be sure we're not guessing short, the traffic limitation features activate
+at **90%** of the defined threshold and stop all kind of traffic at **93%**.
+
+Finally, it's important to mention that any other kind of traffic is not
+currently measured:
+- Contract enrollments, disenrollments & heartbeats
+- Upgrade downloads
+- Sharetoken submissions
+- Application telemetry, if any
+- Additional traffic result of operator interaction or automations
+
+We consider that traffic to be comparatively marginal, but it might be not.
+
+### Network cap
+
+The network cap feature limits the network traffic routed by the relay.
+It supports global and per contract limits. Once a limit is reached, the
+relay disenrolls from the affected contract, or from all of them.
+Once the current measurement period ends, the relay reconnects to the
+defined contracts.
+
+This mechanism is described in detail in the following section.
+
+#### Thresholds
+
+Two thresholds have been set to smooth the transition of the current clients to
+other relays: The `soft-limit` is oriented to prevent new clients from
+reaching the relay (by refusing new connections and disenrolling the relay
+from the contract), whereas the `hard-limit` also closes the remaining active
+connections.
+
+Currently the `soft-limit` is activated when reached the **90%** of the "limit
+value" of a contract and the `hard-limit` at **93%** of the same value.
+
+It's important to mention that the global limit doesn't support `soft-limit`,
+and if reached the relay disconnects all clients and disenrolls from all the 
+contracts.
+
+If the relay is connected to only one contract, please also set the limit on the
+contract configuration to enable the `soft-limit` feature.
+
+### Network usage configuration example
+
+```json
+{
+    "address": "127.0.0.1:13490",
+    "archive_dir": "archive/sharetokens",
+    "auto_submit_interval": "5m0s",
+    "network_usage": {
+        "global_limit": "1TB",
+        "timeframe": "30d",
+        "write_interval": "5m0s",
+        "archive_dir": "archive/netstats"
+    },
+    "contracts": {
+        "https://contract1.example.com": {
+            "address": "wireleap://relay1.example.com:13490",
+            "role": "entropic",
+            "network_usage_limit": "1TB"
+        }
+    }
+}
+```
+
+## POSIX signal hooks
+
+Currently the wireleap relay lacks an API to be operated.
+The most needed operations can be performed by sending a POSIX signal.
+
+| Signal  | Purpose                  |
+|---------|--------------------------|
+| SIGUSR1 | Reload the configuration |
+| SIGUSR2 | Update `stats.json` file |
 
 ## Testing
 
@@ -625,4 +785,3 @@ permissions, they may perform the merge subject to the above.
 ## License
 
 The MIT License (MIT)
-
