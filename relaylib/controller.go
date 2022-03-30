@@ -379,3 +379,15 @@ func (c *Controller) SCS() (m map[string]string) {
 	}
 	return
 }
+
+// Returns current relays Netcaps, by contractId
+func (c *Controller) NetCap() (m map[string]uint64) {
+	m = make(map[string]uint64)
+
+	for contractId, rs := range c.relays {
+		if rs.Relay.NetUsage != 0 {
+			m[contractId] = uint64(rs.Relay.NetUsage)
+		}
+	}
+	return
+}

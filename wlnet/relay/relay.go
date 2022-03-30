@@ -19,6 +19,8 @@ import (
 	"github.com/wireleap/common/wlnet/flushwriter"
 	"github.com/wireleap/common/wlnet/h2rwc"
 	"github.com/wireleap/common/wlnet/transport"
+	"github.com/wireleap/relay/api/meteredrwc"
+	"github.com/wireleap/relay/api/meteredrwc/mrwclabels"
 	"github.com/wireleap/relay/contractmanager"
 )
 
@@ -41,6 +43,12 @@ type Options struct {
 	// AllowLoopback sets whether to allow dialing loopback addresses. While
 	// useful for testing, it presents a security risk in production.
 	AllowLoopback bool
+	// GlobalCap sets the ammount of traffic that can be forwarded during
+	// a given period
+	GlobalCap uint64
+	// ContractCap sets the ammount of traffic that can be forwarded during
+	// a given period, by contract
+	ContractCap map[string]uint64
 }
 
 func New(tt *transport.T, m *contractmanager.Manager, o Options) *T {
@@ -79,6 +87,8 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Writer:     flushwriter.T{Writer: w},
 		ReadCloser: r.Body,
 	}
+
+	var ctlabs mrwclabels.ContractLabels
 	defer c.Close()
 
 	origin := t.ErrorOrigin
@@ -101,6 +111,26 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Origin: origin,
 		}).WriteTo(c)
 		return
+	}
+
+	contractId := p.Token.Contract.PublicKey.String()
+	ctlabs = ctlabs.SetContract(contractId)
+
+	// check if contract is accepted by the relay controller
+	var ctx context.Context
+	if t.Manager.Controller != nil {
+		ctx, err = t.Manager.Controller.NewConn(contractId)
+
+		if err != nil {
+			(&status.T{
+				Code:   http.StatusBadRequest,
+				Desc:   err.Error(),
+				Origin: origin,
+			}).ToHeader(h)
+			return
+		}
+	} else {
+		ctx = context.Background()
 	}
 
 	if t.HandleST != nil {
@@ -165,7 +195,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = wlnet.Splice(context.TODO(), c, c2, t.MaxTime, t.BufSize)
+	err = t.meteredSplice(ctx, c, c2, ctlabs)
 
 	if err != nil {
 		// TODO more granular errors
@@ -184,6 +214,28 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}).ToHeader(h)
 		}
 	}
+}
+
+func (t *T) monitorRWC(cIn, cOut io.ReadWriteCloser, ctId string) (io.ReadWriteCloser, io.ReadWriteCloser, func() error) {
+	// To extend if other metrics need to be recorded
+	syncCounter := t.Manager.NetStats.Active.ContractStats.GetOrInit(ctId)
+	in, out := syncCounter.Inner() // Get inner counters
+	return meteredrwc.New(cIn, in), meteredrwc.New(cOut, out), syncCounter.Close
+}
+
+func (t *T) meteredSplice(ctx context.Context, cIn, cOut io.ReadWriteCloser, ctlabs mrwclabels.ContractLabels) error {
+	var closeFn func() error
+	if t.Manager.NetStats.Enabled() {
+		cIn, cOut, closeFn = t.monitorRWC(cIn, cOut, ctlabs.Contract)
+	}
+
+	defer func() {
+		if err := closeFn(); err != nil {
+			log.Printf("error happened when closing synccounter %s\n", err.Error())
+		}
+	}()
+
+	return wlnet.Splice(ctx, cIn, cOut, t.MaxTime, t.BufSize)
 }
 
 // ListenAndServeHTTP listens on the specified address and passes the
