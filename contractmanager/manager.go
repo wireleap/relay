@@ -778,6 +778,16 @@ func (m *Manager) Status() (ms managerStatus) {
 	return
 }
 
+// Force stats file storage
+func (m *Manager) StoreStats() {
+	if m.NetStats.Enabled() {
+		// Store starts before exiting
+		if f := m.netFns.storeStats; f != nil {
+			f()
+		}
+	}
+}
+
 // Handle upgrade response
 func (m *Manager) upgradeHandler(st *status.T) {
 	v1s := st.Cause.Error() // FIXME this is slightly unobvious

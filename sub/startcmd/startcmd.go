@@ -256,6 +256,7 @@ func serverun(fm fsdir.T) {
 		syscall.SIGUSR2: func() (_ bool) {
 			log.Println("current status")
 			r.Manager.PrintStatus()
+			r.Manager.StoreStats()
 			return
 		},
 		syscall.SIGINT:  shutdown,
