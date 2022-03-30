@@ -173,7 +173,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Dialing %s connection to %s", p.Protocol, shown)
-	c2, err := t.T.Transport.DialContext(context.TODO(), p.Protocol, p.Remote.Host)
+	c2, err := t.T.Transport.DialContext(ctx, p.Protocol, p.Remote.Host)
 
 	if err != nil {
 		// TODO more granular errors
