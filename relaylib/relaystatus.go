@@ -52,8 +52,8 @@ type RelayStatus struct {
 }
 
 type RelayFlags struct {
-	Enrolled bool
-	//NetCapReached bool
+	Enrolled      bool
+	NetCapReached bool
 	/**
 		ToDo: More flags to define the current status
 		- Failed heartbeats
@@ -165,7 +165,7 @@ func (rs *relayStatus) enroll(cl *client.Client, init bool, errHandler func(*rel
 	if err == nil {
 		// Update relay status
 		rs.status.Enrolled = true
-		//rs.status.NetCapReached = false
+		rs.status.NetCapReached = false
 
 		if rs.ctx.isNil() {
 			// Renew context if not initialised
@@ -239,7 +239,7 @@ func (rs *relayStatus) Disable() {
 	defer rs.lock.Unlock()
 
 	// Update relay status
-	//rs.status.NetCapReached = true
+	rs.status.NetCapReached = true
 
 	// Cancel context
 	if rs.ctx.Context != nil {

@@ -12,6 +12,8 @@ import (
 	"github.com/wireleap/common/api/duration"
 	"github.com/wireleap/common/api/texturl"
 	relayentry "github.com/wireleap/relay/api/relayentryext"
+
+	"github.com/c2h5oh/datasize"
 )
 
 // C is the type of the config struct describing the config file format.
@@ -29,12 +31,28 @@ type C struct {
 	Timeout duration.T `json:"timeout,omitempty"`
 	// BufSize is the size in bytes of transmit/receive buffers.
 	BufSize int `json:"bufsize,omitempty"`
+	// NetUsage is the allocated bandwith per time period.
+	// NetUsage is disabled if UsageCap.Duration is 0.
+	NetUsage NetUsage `json:"network_usage,omitempty"`
 	// Contracts is the map of service contracts used by this wireleap-relay.
 	Contracts map[texturl.URL]*relayentry.T `json:"contracts,omitempty"`
 	// AutoUpgrade sets whether this relay should attempt auto-upgrades.
 	AutoUpgrade bool `json:"auto_upgrade,omitempty"`
 	// Those are expert settings. Take care.
 	DangerZone DangerZone `json:"danger_zone,omitempty"`
+}
+
+// Network usage soft-cap
+// Soft-cap per contract defined in relayentry.T
+type NetUsage struct {
+	// Duration defines the time period.
+	Timeframe duration.T `json:"timeframe"`
+	// GlobaLimit is disabled if it is 0.
+	GlobalLimit datasize.ByteSize `json:"global_limit"`
+	// WriteInterval defines how often the metrics are stored on disk
+	WriteInterval *duration.T `json:"write_interval"`
+	// ArchiveDir is the path of the archived statistics directory.
+	ArchiveDir *string `json:"archive_dir,omitempty"`
 }
 
 type DangerZone struct {

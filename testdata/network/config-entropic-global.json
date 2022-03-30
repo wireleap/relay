@@ -1,0 +1,18 @@
+{
+  "address": "0.0.0.0:4446",
+  "archive_dir": "archive/sharetokens",
+  "auto_submit_interval": "30s",
+  "contracts": {
+    "http://wireleap-contract:8080": {
+      "address": "wireleap://wireleap-relay-entropic:4446",
+      "role": "entropic",
+      "key": "entropic:ekeyplain"
+    }
+  },
+  "network_usage": {
+    "timeframe": "30m",
+    "write_interval": "5m",
+    "archive_dir": "netstats",
+    "global_limit": "100MB"
+  }
+}

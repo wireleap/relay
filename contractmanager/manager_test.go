@@ -161,10 +161,23 @@ func TestController(t *testing.T) {
 		})
 	})
 
+	t.Run("TestStatus", func(t *testing.T) {
+		// Test print of the contract manager
+		t.Run("statusOk", func(t *testing.T) {
+			m.PrintStatus()
+		})
+	})
+
 	t.Run("TestStop", func(t *testing.T) {
 		// Test stopping the contract manager
 		t.Run("stopOk", func(t *testing.T) {
 			m.Stop() // Stop panics on failure
+		})
+
+		t.Run("startStatus", func(t *testing.T) {
+			if m.Controller.Started() {
+				t.Fatal("Controller shouldn't be started")
+			}
 		})
 	})
 

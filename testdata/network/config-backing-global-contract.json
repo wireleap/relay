@@ -1,0 +1,19 @@
+{
+  "address": "0.0.0.0:4447",
+  "archive_dir": "archive/sharetokens",
+  "auto_submit_interval": "30s",
+  "contracts": {
+    "http://wireleap-contract:8080": {
+      "address": "wireleap://wireleap-relay-backing:4447",
+      "role": "backing",
+      "key": "bkey",
+      "network_usage_limit": "50MB"
+    }
+  },
+  "network_usage": {
+    "timeframe": "30m",
+    "write_interval": "5m",
+    "archive_dir": "netstats",
+    "global_limit": "100MB"
+  }
+}

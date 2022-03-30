@@ -1,0 +1,18 @@
+{
+  "address": "0.0.0.0:2233",
+  "archive_dir": "archive/sharetokens",
+  "auto_submit_interval": "30s",
+  "contracts": {
+    "http://wireleap-contract:8080": {
+      "address": "wireleap://wireleap-relay-fronting:2233",
+      "role": "fronting",
+      "key": "fronting:fkey",
+      "network_usage_limit": "50MB"
+    }
+  },
+  "network_usage": {
+    "timeframe": "30m",
+    "write_interval": "5m",
+    "archive_dir": "netstats"
+  }
+}
