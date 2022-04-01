@@ -396,49 +396,8 @@ func (m *Manager) setReachedCapsMock() {
 
 func (m *Manager) setCheckStats() {
 	m.netFns.checkStats = func() {
-		// gather external data sources
-		caps, globalXCap := m.netCaps.Caps()
-
-		// initialise global counter
-		sum := uint64(0)
-
-		// Init result flags
-		globalCap := false
-		reachedCaps := map[string]int{}
-
-		m.netFns.lock.Lock()
-		f := func(contract string, contractBytes *synccounters.ContractCounter) bool {
-			if contractBytes == nil {
-				log.Printf("Contract metric %s returned nil value", contract)
-				// To check, maybe it's better to abort returning false
-				return true
-			}
-
-			i := contractBytes.Sum()
-
-			if m.netCaps.globalCap != 0 {
-				sum = sum + i
-
-				if sum >= globalXCap.hard {
-					globalCap = true
-					return false
-				}
-			}
-
-			if ct_cap, ok := caps[contract]; !ok {
-				// pass
-			} else if i > ct_cap.hard {
-				reachedCaps[contract] = hardCap
-			} else if i > ct_cap.soft {
-				reachedCaps[contract] = softCap
-			}
-			return true
-		}
-
-		/** result := **/
-		m.NetStats.Active.ContractStats.Range(f)
-		/** If stopped, (returns false) the global netcap was "certainly" reached**/
-		m.netFns.lock.Unlock()
+		// Retrieve current net cap status
+		globalCap, reachedCaps := m.netFns.getReachedCaps()
 
 		relaystatus := m.Controller.Status()
 
@@ -465,6 +424,12 @@ func (m *Manager) setCheckStats() {
 		} else {
 			// Disenrolling relays
 			for cid, capType := range reachedCaps {
+				if capType == okCap {
+					// No cap reached
+					continue
+				}
+
+				// At least softCap was reached
 				rs := relaystatus[cid]
 				if rs.Flags.Enrolled {
 					if err := m.Controller.Disenroll(cid); err != nil {
@@ -487,7 +452,6 @@ func (m *Manager) setCheckStats() {
 
 		// Enrolling relays
 		for cid, rs := range relaystatus {
-			//log.Printf("Contract cap on %s:%v was not reached", cid, status)
 			if !rs.Flags.Enrolled {
 				if err := m.Controller.Enroll(cid); err != nil {
 					log.Printf("Error while reenrolling, %s", err.Error())
@@ -690,7 +654,7 @@ func (m *Manager) ReloadCfg(c *relaycfg.C) (err error) {
 		return ErrMissingConf
 	}
 
-	err = m.Controller.Reload(c) // WIP
+	err = m.Controller.Reload(c)
 
 	// Reload Network usage configuration
 	if nsCfg := loadNSCfg(c); m.NetStats.cfg.Enabled() != nsCfg.Enabled() {
