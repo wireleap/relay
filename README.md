@@ -390,6 +390,9 @@ post-upgrade.
 If the upgrade was not successful, it is possible to skip the faulty
 version explicitly.
 
+Note: since the `.skip-upgrade-version` file has to be valid JSON, the
+version number to be skipped should be quoted.
+
 ```shell
 su -l wireleap-relay
 
@@ -400,7 +403,7 @@ su -l wireleap-relay
 ./wireleap-relay rollback
 
 # skip upgrades to version 1.2.3
-echo "1.2.3" > .skip-upgrade-version
+echo '"1.2.3"' > .skip-upgrade-version
 ```
 
 ## Versioning
