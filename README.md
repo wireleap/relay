@@ -57,8 +57,8 @@ su -l wireleap-relay
 
 # download binary and hashfile for Linux
 DIST="https://github.com/wireleap/relay/releases/latest/download"
-curl -O $DIST/wireleap-relay_linux-amd64
-curl -O $DIST/wireleap-relay_linux-amd64.hash
+curl -LO $DIST/wireleap-relay_linux-amd64
+curl -LO $DIST/wireleap-relay_linux-amd64.hash
 
 # cryptographically verify integrity of the hashfile
 gpg --recv-keys 693C86E9DECA9D07D79FF9D22ECD72AD056012E1
