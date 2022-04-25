@@ -14,11 +14,3 @@ type T struct {
 	// Network usage limit
 	NetUsage datasize.ByteSize `json:"network_usage_limit,omitempty"`
 }
-
-func (r *T) String() string {
-	return r.T.String()
-}
-
-func (r *T) Validate() error {
-	return r.T.Validate()
-}
