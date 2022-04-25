@@ -34,4 +34,8 @@ func TestRetransmit(t *testing.T) {
 	time.Sleep(time.Second)
 	r.Close()
 	<-ec
+
+	if int(i) != len(test) {
+		t.Error("MeteredRWC failed")
+	}
 }
