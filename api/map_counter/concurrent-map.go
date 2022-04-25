@@ -34,12 +34,6 @@ func (m concurrentMap) GetShard(key string) *ConcurrentMapShared {
 	return m[uint(fnv32(key))%uint(SHARD_COUNT)]
 }
 
-// Callback to return new element to be inserted into the map
-// It is called while lock is held, therefore it MUST NOT
-// try to access other keys in same map, as it can lead to deadlock since
-// Go sync.RWLock is not reentrant
-type UpsertCb func(exist bool, valueInMap *uint64, newValue *uint64) *uint64
-
 // Sets the given value under the specified key if no value was associated with it.
 func (m concurrentMap) SetIfAbsent(key string, value *synccounters.ContractCounter) bool {
 	// Get map shard.
