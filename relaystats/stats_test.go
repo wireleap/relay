@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/wireleap/relay/api/map_counter"
-	"github.com/wireleap/relay/relaystats/epoch"
+	"github.com/wireleap/relay/api/epoch"
 )
 
 func TestNetStatsLoadSave(t *testing.T) {

@@ -5,7 +5,7 @@ package nustore
 import (
 	"strconv"
 
-	"github.com/wireleap/relay/relaystats/epoch"
+	"github.com/wireleap/relay/api/epoch"
 )
 
 type ContractMetric struct {
