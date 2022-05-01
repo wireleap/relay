@@ -3,7 +3,7 @@
 package file
 
 import (
-	"github.com/wireleap/relay/relaystats/epoch"
+	"github.com/wireleap/relay/api/epoch"
 )
 
 // Statistics per contract

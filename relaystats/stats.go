@@ -7,7 +7,7 @@ import (
 
 	"github.com/wireleap/relay/api/map_counter"
 	"github.com/wireleap/relay/api/synccounters"
-	"github.com/wireleap/relay/relaystats/epoch"
+	"github.com/wireleap/relay/api/epoch"
 	"github.com/wireleap/relay/relaystats/file"
 )
 
