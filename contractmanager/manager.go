@@ -9,6 +9,7 @@ import (
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
+	"github.com/wireleap/relay/api/epoch"
 	"github.com/wireleap/relay/api/synccounters"
 	"github.com/wireleap/relay/filenames"
 	"github.com/wireleap/relay/relaycfg"
@@ -729,7 +730,7 @@ func (m *Manager) Status() (ms managerStatus) {
 	}
 
 	if m.NetStats.Enabled() {
-		until := int64(m.netFns.nextReset.UnixNano() / 1000000)
+		until := epoch.ToEpochMillis(m.netFns.nextReset)
 
 		ms.Since = &m.NetStats.Active.CreatedAt
 		ms.Until = &until
