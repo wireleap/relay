@@ -121,11 +121,6 @@ func testMapReset(t *testing.T, newMap func() Map) {
 	}
 }
 
-func TestCMap(t *testing.T) {
-	testMap(t, NewCMap)
-	testMapReset(t, NewCMap)
-}
-
 func TestAtomicList(t *testing.T) {
 	testMap(t, NewList)
 	testMapReset(t, NewList)

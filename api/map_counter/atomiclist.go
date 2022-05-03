@@ -9,6 +9,11 @@ import (
 	"sync/atomic"
 )
 
+type Tuple struct {
+	Key string
+	Val *synccounters.ContractCounter
+}
+
 type atomicList struct {
 	atomic.Value
 	sync.Mutex
