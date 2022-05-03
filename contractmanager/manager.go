@@ -223,19 +223,12 @@ func (n netStats) GetNextReset() (time.Time, bool) {
 
 // Contract Manager functions
 type netFns struct {
-	lock           *sync.Mutex
+	lock           sync.Mutex
 	storeStats     func()
 	getReachedCaps func() (bool, map[string]int)
 	checkStats     func()
 	resetStats     func(time.Time)
 	nextReset      time.Time
-}
-
-// Contract Manager function init
-func newFns() netFns {
-	return netFns{
-		lock: &sync.Mutex{},
-	}
 }
 
 // Contract Manager Status
@@ -307,7 +300,6 @@ func NewManager(fm fsdir.T, c *relaycfg.C, pubkey string, cl *client.Client) (m 
 		upgradechan: callback,
 		NetStats:    ns,
 		netCaps:     nc,
-		netFns:      newFns(),
 		fm:          fm,
 	}
 	return
