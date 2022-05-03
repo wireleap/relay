@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"sync"
 	"time"
 )
@@ -113,44 +112,20 @@ func (n netCapsCfg) Enabled() bool {
 }
 
 // Retuns new cap calculation
-func (_ netCapsCfg) capCalc(orig, factor *big.Float) (res uint64) {
-	ff := new(big.Float)
-	ff.Mul(orig, factor)
-	res, _ = ff.Uint64()
-	return
-}
-
-// Retuns new map cap calculation
-func (n netCapsCfg) capMap(caps map[string]*big.Float, factor *big.Float) (res map[string]uint64) {
-	res = make(map[string]uint64, len(caps))
-	for k, f := range caps {
-		res[k] = n.capCalc(f, factor)
-	}
-	return
+func (_ netCapsCfg) capCalc(orig, factor *float64) uint64 {
+	return uint64(*orig * *factor)
 }
 
 // Retuns new map and global cap calculations
-func (n netCapsCfg) xCap(f float64) (resCaps map[string]uint64, resGlobal uint64) {
+func (n netCapsCfg) xCap(factor float64) (resCaps map[string]uint64, resGlobal uint64) {
 	contractCaps := n.contractCaps()
 
-	factor := new(big.Float)
-	factor.SetFloat64(f)
+	resGlobal = uint64(float64(n.globalCap) * factor)
 
-	globalCap := new(big.Float)
-	globalCap.SetUint64(n.globalCap)
-
-	globalXCap := new(big.Float)
-	globalXCap.Mul(globalCap, factor)
-	resGlobal, _ = globalXCap.Uint64()
-
-	caps := make(map[string]*big.Float, len(contractCaps))
+	resCaps = make(map[string]uint64, len(contractCaps))
 	for k, u := range contractCaps {
-		f := new(big.Float)
-		f.SetUint64(u)
-		caps[k] = f
+		resCaps[k] = uint64(float64(u) * factor)
 	}
-
-	resCaps = n.capMap(caps, factor)
 	return
 }
 
@@ -166,39 +141,17 @@ func (n netCapsCfg) HardCap() (map[string]uint64, uint64) {
 
 // Retuns new map and global soft+hard cap calculations
 func (n netCapsCfg) Caps() (resCaps map[string]cap, resGlobal cap) {
-	contractCaps := n.contractCaps()
-
-	factorSoft := new(big.Float)
-	factorSoft.SetFloat64(netCapSoftLimit)
-
-	factorHard := new(big.Float)
-	factorHard.SetFloat64(netCapHardLimit)
-
-	globalCap := new(big.Float)
-	globalCap.SetUint64(n.globalCap)
-
-	globalSoftCap := new(big.Float)
-	globalSoftCap.Mul(globalCap, factorSoft)
-	resGlobal.soft, _ = globalSoftCap.Uint64()
-
-	globalHardCap := new(big.Float)
-	globalHardCap.Mul(globalCap, factorHard)
-	resGlobal.hard, _ = globalHardCap.Uint64()
-
-	caps := make(map[string]*big.Float, len(contractCaps))
-	for k, u := range contractCaps {
-		f := new(big.Float)
-		f.SetUint64(u)
-		caps[k] = f
+	resGlobal = cap{
+		soft: uint64(float64(n.globalCap) * netCapSoftLimit),
+		hard: uint64(float64(n.globalCap) * netCapHardLimit),
 	}
 
-	resSoftCaps := n.capMap(caps, factorSoft)
-	resHardCaps := n.capMap(caps, factorHard)
+	contractCaps := n.contractCaps()
 
 	resCaps = make(map[string]cap, len(contractCaps))
-	for k, _ := range contractCaps {
-		soft := resSoftCaps[k]
-		hard := resHardCaps[k]
+	for k, u := range contractCaps {
+		soft := uint64(float64(u) * netCapSoftLimit) // softFactor
+		hard := uint64(float64(u) * netCapHardLimit) // hardFactor
 		resCaps[k] = cap{soft, hard}
 	}
 	return
