@@ -101,7 +101,7 @@ func newNCCfg() netCapsCfg {
 	}
 }
 
-// Partially load clean network usage limtter config from file
+// Partially load clean network usage limiter config from file
 func (cfg *netCapsCfg) loadNCCfg(c *relaycfg.C) {
 	cfg.globalCap = uint64(c.NetUsage.GlobalLimit)
 }
@@ -601,6 +601,9 @@ func (m *Manager) ReloadCfg(c *relaycfg.C) (err error) {
 	}
 
 	err = m.Controller.Reload(c)
+	if err != nil {
+		return
+	}
 
 	// Reload Network usage configuration
 	if nsCfg := loadNSCfg(c); m.NetStats.cfg.Enabled() != nsCfg.Enabled() {
@@ -618,11 +621,11 @@ func (m *Manager) ReloadCfg(c *relaycfg.C) (err error) {
 		if m.netCaps.Enabled() != nc.Enabled() {
 			log.Println("please, restart the relay to enable or disable netCap")
 		} else if m.netCaps.Enabled() {
-			m.netCaps.loadNCCfg(c)
+			m.netCaps = nc
 		}
 	}
 
-	return nil
+	return
 }
 
 func (m *Manager) Status() (ms managerStatus) {

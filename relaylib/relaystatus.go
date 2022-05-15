@@ -131,6 +131,7 @@ func (rs *relayStatus) Reload(cfg *relayentryext.T) (err error) {
 
 	rs.Relay.Addr = cfg.Addr
 	rs.Relay.Key = cfg.Key
+	rs.Relay.NetUsage = cfg.NetUsage
 	return
 }
 
