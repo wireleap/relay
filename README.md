@@ -103,7 +103,7 @@ auto_upgrade                    | `bool`   | automatically upgrade this relay (d
 
 ```json
 {
-    "address": "0.0.0.0:13490",
+    "address": "0.0.0.0:13499",
     "archive_dir": "archive/sharetokens",
     "auto_submit_interval": "5m0s",
     "network_usage": {
@@ -114,12 +114,12 @@ auto_upgrade                    | `bool`   | automatically upgrade this relay (d
     },
     "contracts": {
         "https://contract1.example.com": {
-            "address": "wireleap://relay1.example.com:13490",
+            "address": "wireleap://relay1.example.com:13499",
             "role": "backing",
             "key": "backing:secretkey"
         },
         "https://contract2.example.com": {
-            "address": "wireleap://relay1.example.com:13490",
+            "address": "wireleap://relay1.example.com:13499",
             "role": "entropic",
             "network_usage_limit": "1TB"
         }
@@ -150,7 +150,7 @@ proxied to and from the relay daemon `address`.
 
 ```json
 {
-    "address": "127.0.0.1:13490",
+    "address": "127.0.0.1:13499",
     "archive_dir": "archive/sharetokens",
     "auto_submit_interval": "5m0s",
     "contracts": {
@@ -182,8 +182,8 @@ proxied to and from the relay daemon `address`.
        <IfModule mod_reqtimeout.c>
          RequestReadTimeout handshake=0 header=0 body=0
        </IfModule>
-       ProxyPass "h2://127.0.0.1:13490"
-       ProxyPassReverse "h2://127.0.0.1:13490"
+       ProxyPass "h2://127.0.0.1:13499"
+       ProxyPassReverse "h2://127.0.0.1:13499"
      </Location>
    </VirtualHost>
  </IfModule>
@@ -201,7 +201,7 @@ server {
     ssl_protocols TLSv1.3;
 
     location /wireleap {
-        grpc_pass grpcs://127.0.0.1:13490;
+        grpc_pass grpcs://127.0.0.1:13499;
         grpc_ssl_protocols TLSv1.3;
     }
 }
