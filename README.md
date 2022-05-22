@@ -98,7 +98,7 @@ supported variables:
 Key | Type | Comment
 --- | ---- | -------
 address | `string` | address to bind to (`host:port`)
-archive_dir | `string` | path to archive submitted sharetokens (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
+archive_dir | `string` | path to archive submitted sharetokens (optional)
 auto_submit_interval | `string` | interval between sharetoken submission retries (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
 network_usage.global_limit | `string` | maximum routed traffic in defined preriod (optional, [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings))
 network_usage.timeframe | `string` | routed traffic measurement fixed time window (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
