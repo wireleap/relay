@@ -131,10 +131,6 @@ auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
         },
         "https://contract2.example.com": {
             "address": "wireleap://relay1.example.com:13490",
-            "role": "entropic"
-        },
-        "https://contract3.example.com": {
-            "address": "wireleap://relay1.example.com:13490",
             "role": "entropic",
             "network_usage_limit": "1TB"
         }
