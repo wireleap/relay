@@ -99,16 +99,16 @@ Key | Type | Comment
 --- | ---- | -------
 address | `string` | address to bind to (`host:port`)
 archive_dir | `string` | path to archive submitted sharetokens (optional)
-auto_submit_interval | `string` | interval between sharetoken submission retries (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
-network_usage.global_limit | `string` | maximum routed traffic in defined preriod (optional, [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings))
-network_usage.timeframe | `string` | routed traffic measurement fixed time window (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
-network_usage.write_interval | `string` | interval between telemetry autosaves (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
+auto_submit_interval | `string` | interval between sharetoken submission retries (optional)
+network_usage.global_limit | `string` | maximum routed traffic in defined period (optional)
+network_usage.timeframe | `string` | routed traffic measurement fixed time window (optional)
+network_usage.write_interval | `string` | interval between autosaves (optional)
 network_usage.archive_dir | `string` | path of the archived statistics directory (optional)
 contracts.X | `string` | service contract endpoint url
 contracts.X.address | `string` | `wireleap://host:port[/uri]`
 contracts.X.role | `string` | `fronting` `entropic` `backing`
 contracts.X.key | `string` | `user:password` format enrollment key if required
-contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract (optional, [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings))
+contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract
 contracts.X.upgrade_channel | `string` | upgrade channel (default: `"default"`)
 auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
 
