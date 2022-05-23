@@ -17,7 +17,7 @@ func handle_err(t *testing.T, err error) {
 }
 
 func TestArchive(t *testing.T) {
-	ns := relaystats.NewNetStats(map_counter.NewCMap)
+	ns := relaystats.NewNetStats(map_counter.NewList)
 
 	if !ns.Enabled() {
 		t.Error("Netstats not initialised")
@@ -96,7 +96,7 @@ func TestArchive(t *testing.T) {
 }
 
 func TestArchiveActiveCT(t *testing.T) {
-	ns := relaystats.NewNetStats(map_counter.NewCMap)
+	ns := relaystats.NewNetStats(map_counter.NewList)
 
 	if !ns.Enabled() {
 		t.Error("Netstats not initialised")

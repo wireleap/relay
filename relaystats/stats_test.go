@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wireleap/relay/api/map_counter"
 	"github.com/wireleap/relay/api/epoch"
+	"github.com/wireleap/relay/api/map_counter"
 )
 
 func TestNetStatsLoadSave(t *testing.T) {
@@ -61,7 +61,7 @@ func TestNetStatsLoadSave(t *testing.T) {
 }
 
 func TestNetStatsInit(t *testing.T) {
-	ns := NewNetStats(map_counter.NewCMap)
+	ns := NewNetStats(map_counter.NewList)
 
 	if !ns.Enabled() {
 		t.Error("Netstats not initialised")
@@ -75,7 +75,7 @@ func TestNetStatsInit(t *testing.T) {
 }
 
 func TestNetStatsReset(t *testing.T) {
-	ns := NewNetStats(map_counter.NewCMap)
+	ns := NewNetStats(map_counter.NewList)
 
 	if !ns.Enabled() {
 		t.Error("Netstats not initialised")
@@ -116,7 +116,7 @@ func TestNetStatsReset(t *testing.T) {
 }
 
 func TestNetStatsGetNextReset(t *testing.T) {
-	ns := NewNetStats(map_counter.NewCMap)
+	ns := NewNetStats(map_counter.NewList)
 
 	if !ns.Enabled() {
 		t.Error("Netstats not initialised")
