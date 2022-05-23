@@ -18,12 +18,7 @@ This repository is for the Wireleap relay.
     - [Fronting relay configuration example](#fronting-relay-configuration-example)
     - [Apache configuration example](#apache-configuration-example)
     - [Nginx configuration example](#nginx-configuration-example)
-- [Network usage](#network-usage)
-    - [Network usage measurement](#network-usage-measurement)
-    - [Network cap](#network-cap)
-      - [Thresholds](#thresholds)
-    - [Network usage configuration example](#network-usage-configuration-example)
-- [POSIX signal hooks](#posix-signal-hooks)
+- [Network usage and limits](#network-usage-and-limits)
 - [Testing](#testing)
 - [Production](#production)
     - [Increase ulimit](#increase-ulimit)
@@ -36,12 +31,6 @@ This repository is for the Wireleap relay.
 - [Versioning](#versioning)
 - [Building](#building)
 - [Contributing](#contributing)
-    - [Fork, clone and setup upstream remote](#fork-clone-and-setup-upstream-remote)
-    - [Create a feature branch and make your changes](#create-a-feature-branch-and-make-your-changes)
-    - [Unit testing](#unit-testing)
-    - [Rebase on master if needed](#rebase-on-master-if-needed)
-    - [Push changes and submit a pull request](#push-changes-and-submit-a-pull-request)
-    - [Review process and merge](#review-process-and-merge)
 - [License](#license)
 
 ## Installation
@@ -95,26 +84,26 @@ service contracts the relay supports along with a specific configuration
 per each contract as well as the daemon configuration. Currently
 supported variables:
 
-Key | Type | Comment
---- | ---- | -------
-address | `string` | address to bind to (`host:port`)
-archive_dir | `string` | path to archive submitted sharetokens (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
-auto_submit_interval | `string` | interval between sharetoken submission retries (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
-network_usage.global_limit | `string` | maximum routed traffic in defined preriod (optional, [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings))
-network_usage.timeframe | `string` | routed traffic measurement fixed time window (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
-network_usage.write_interval | `string` | interval between telemetry autosaves (optional, [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration))
-network_usage.archive_dir | `string` | path of the archived statistics directory (optional)
-contracts.X | `string` | service contract endpoint url
-contracts.X.address | `string` | `wireleap://host:port[/uri]`
-contracts.X.role | `string` | `fronting` `entropic` `backing`
-contracts.X.key | `string` | `user:password` format enrollment key if required
-contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract (optional, [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings))
-contracts.X.upgrade_channel | `string` | upgrade channel (default: `"default"`)
-auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
+Key                             | Type     | Comment
+---                             | ----     | -------
+address                         | `string` | address to bind to (`host:port`)
+archive_dir                     | `string` | path to archive submitted sharetokens (optional)
+auto_submit_interval            | `string` | interval between sharetoken submission retries (optional)
+network_usage.global_limit      | `string` | maximum routed traffic in defined period (optional)
+network_usage.timeframe         | `string` | routed traffic measurement fixed time window (optional)
+network_usage.write_interval    | `string` | interval between autosaves (optional)
+network_usage.archive_dir       | `string` | path of the archived statistics directory (optional)
+contracts.X                     | `string` | service contract endpoint url
+contracts.X.address             | `string` | `wireleap://host:port[/uri]`
+contracts.X.role                | `string` | `fronting` `entropic` `backing`
+contracts.X.key                 | `string` | `user:password` format enrollment key if required
+contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract
+contracts.X.upgrade_channel     | `string` | upgrade channel (default: `"default"`)
+auto_upgrade                    | `bool`   | automatically upgrade this relay (default: `true`)
 
 ```json
 {
-    "address": "0.0.0.0:13490",
+    "address": "0.0.0.0:13499",
     "archive_dir": "archive/sharetokens",
     "auto_submit_interval": "5m0s",
     "network_usage": {
@@ -125,16 +114,12 @@ auto_upgrade | `bool` | automatically upgrade this relay (default: `true`)
     },
     "contracts": {
         "https://contract1.example.com": {
-            "address": "wireleap://relay1.example.com:13490",
+            "address": "wireleap://relay1.example.com:13499",
             "role": "backing",
             "key": "backing:secretkey"
         },
         "https://contract2.example.com": {
-            "address": "wireleap://relay1.example.com:13490",
-            "role": "entropic"
-        },
-        "https://contract3.example.com": {
-            "address": "wireleap://relay1.example.com:13490",
+            "address": "wireleap://relay1.example.com:13499",
             "role": "entropic",
             "network_usage_limit": "1TB"
         }
@@ -165,7 +150,7 @@ proxied to and from the relay daemon `address`.
 
 ```json
 {
-    "address": "127.0.0.1:13490",
+    "address": "127.0.0.1:13499",
     "archive_dir": "archive/sharetokens",
     "auto_submit_interval": "5m0s",
     "contracts": {
@@ -197,8 +182,8 @@ proxied to and from the relay daemon `address`.
        <IfModule mod_reqtimeout.c>
          RequestReadTimeout handshake=0 header=0 body=0
        </IfModule>
-       ProxyPass "h2://127.0.0.1:13490"
-       ProxyPassReverse "h2://127.0.0.1:13490"
+       ProxyPass "h2://127.0.0.1:13499"
+       ProxyPassReverse "h2://127.0.0.1:13499"
      </Location>
    </VirtualHost>
  </IfModule>
@@ -216,149 +201,94 @@ server {
     ssl_protocols TLSv1.3;
 
     location /wireleap {
-        grpc_pass grpcs://127.0.0.1:13490;
+        grpc_pass grpcs://127.0.0.1:13499;
         grpc_ssl_protocols TLSv1.3;
     }
 }
 ```
 
-## Network usage
+## Network usage and limits
 
-Network usage feature enables the operators to monitor and limit the amount of
-data routed through the relay, and for each contract. This feature includes
-status storage accross application restarts and generates historical records of
-each period.
+The Wireleap relay software supports tracking the amount of traffic it
+relays, both globally and per contract. Using this data, it is also
+possible to limit the amount of the traffic it will relay during a
+configured period, also, both globally and per contract.
 
-### Network usage measurement
+This is particularly useful for two reasons. To not exceed any hosting
+bandwidth quota limits (which may incur unexpected charges), and to
+allow the allocation of specific amounts of bandwidth per supported
+contract.
 
-Network traffic is a key and limited resource, just like CPU and RAM.
-Sadly, measuring accurately the used traffic at an application level on modern
-languages is not an easy task Currently the application records the size of the
-routed TCP streams. H/2, TCP, IP, and lower headers are not taken into account.
+**Configuration**
 
-Ignoring the H/2 headers, the remaining headers are: TCP (layer 4) and IP (layer
-3). Lower layers aren't taken into account because they belong to the local
-area network or physical point to point link scopes. In other words, they're
-not routed though the Internet.
+Key                             | Type     | Comment
+---                             | ----     | -------
+network_usage.global_limit      | `string` | maximum routed traffic in defined period
+network_usage.timeframe         | `string` | routed traffic measurement fixed time window
+network_usage.write_interval    | `string` | interval between autosaves
+network_usage.archive_dir       | `string` | path of the archived statistics directory
+contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract
 
-Each IP packet has a header and a payload. The payload is a TCP packet, which
-also has a header and a payload. The TCP payload is, overall, what we're
-currently capable of measuring.
+**Timeframes and records**
 
-Depending on the length of the IP packets, the measured traffic value will
-deviate more or less from the real value. The IP packet length is as low as the
-contained payload and as big as the available MTU (Maximum, Transmision Unit);
-once hit the payload is sent on multiple IP packets, each one containing also
-a TCP header. The IPv4 header size is 20-24 bytes and the TCP one is 20 bytes.
-The network MTU usually is 1492-1500 bytes.
+Timeframes are configured in the [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration)
+format. When a new timeframe is started, the previous stats are
+archived. During the timeframe, the network usage stats are written to
+disk at the specified interval. It is also possible to trigger a _write_
+by sending the `SIGUSR2` signal:
 
-For our calculations, we're taking the most common values:
- - IP header: 20 bytes
- - TCP header: 20 bytes
- - MTU: 1492 bytes
-
-The only remaining variable is the `average packet length`, which depends
-directly on the the protocols and applications used by the client. Packet size
-distribution on computer networks is a quite common paper topic. Sadly, 1)
-there's no generic network usage or applications and 2) the nature of the usage
-evolves with the time. As a result, we only can take inspiration from those
-papers and guess.
-
-Fact 1: Small packets (100 bytes) are commonly used for signalisation purposes,
-audio streams or multiplayer video games.
-Fact 2: Big packages, hitting the MTU are used for heavy payloads requiring
-multiple packets.
-
-Guess: 30% of the packets are small, and 70% are big; the remaining sizes are
-marginal. Average packet size is ~1075 bytes, and measured traffic is 95.8%.
-
-| Avg pkt size (bytes) | Traffic measure accuracy    |
-| -------------------- | --------------------------- |
-| X                    | = (X - headers(IP+TCP)) / X |
-| 1500                 | 97.33%                      |
-| 1492                 | 97.32%                      |
-| 1300                 | 96.92%                      |
-| 1100                 | 96.36%                      |
-| 900                  | 95.56%                      |
-| 700                  | 94.29%                      |
-| 500                  | 92%                         |
-| 300                  | 86.67%                      |
-| 100                  | 60%                         |
-| 40                   | 0%                          |
-
-To be sure we're not guessing short, the traffic limitation features activate
-at **90%** of the defined threshold and stop all kind of traffic at **93%**.
-
-Finally, it's important to mention that any other kind of traffic is not
-currently measured:
-- Contract enrollments, disenrollments & heartbeats
-- Upgrade downloads
-- Sharetoken submissions
-- Application telemetry, if any
-- Additional traffic result of operator interaction or automations
-
-We consider that traffic to be comparatively marginal, but it might be not.
-
-### Network cap
-
-The network cap feature limits the network traffic routed by the relay.
-It supports global and per contract limits. Once a limit is reached, the
-relay disenrolls from the affected contract, or from all of them.
-Once the current measurement period ends, the relay reconnects to the
-defined contracts.
-
-This mechanism is described in detail in the following section.
-
-#### Thresholds
-
-Two thresholds have been set to smooth the transition of the current clients to
-other relays: The `soft-limit` is oriented to prevent new clients from
-reaching the relay (by refusing new connections and disenrolling the relay
-from the contract), whereas the `hard-limit` also closes the remaining active
-connections.
-
-Currently the `soft-limit` is activated when reached the **90%** of the "limit
-value" of a contract and the `hard-limit` at **93%** of the same value.
-
-It's important to mention that the global limit doesn't support `soft-limit`,
-and if reached the relay disconnects all clients and disenrolls from all the 
-contracts.
-
-If the relay is connected to only one contract, please also set the limit on the
-contract configuration to enable the `soft-limit` feature.
-
-### Network usage configuration example
-
-```json
-{
-    "address": "127.0.0.1:13490",
-    "archive_dir": "archive/sharetokens",
-    "auto_submit_interval": "5m0s",
-    "network_usage": {
-        "global_limit": "1TB",
-        "timeframe": "30d",
-        "write_interval": "5m0s",
-        "archive_dir": "archive/netstats"
-    },
-    "contracts": {
-        "https://contract1.example.com": {
-            "address": "wireleap://relay1.example.com:13490",
-            "role": "entropic",
-            "network_usage_limit": "1TB"
-        }
-    }
-}
+```shell
+su -l wireleap-relay
+kill -USR2 $(cat wireleap_relay.pid)
+cat stats.json | jq -r ".contract_stats | map(.network_bytes) | add"
 ```
 
-## POSIX signal hooks
+**Enrollments**
 
-Currently the wireleap relay lacks an API to be operated.
-The most needed operations can be performed by sending a POSIX signal.
+If a contract specific limit is reached, the relay will unenroll from
+that contract. If the global limit is reached irrelevant to specific
+contract limits, the relay will unenroll from all configured contracts.
+Once the current measurement period ends, the relay will re-enroll into
+the configured contracts.
 
-| Signal  | Purpose                  |
-|---------|--------------------------|
-| SIGUSR1 | Reload the configuration |
-| SIGUSR2 | Update `stats.json` file |
+**Thresholds**
+
+Limits are configured in the [`datasize.ByteSize`](https://pkg.go.dev/github.com/c2h5oh/datasize#readme-parsing-strings)
+format. In order to not abruptly disconnect clients using the relay when
+a limit is hit, but rather initiate a smooth transition for clients to
+other relays, as well as account for a margin of error, two thresholds
+have been implemented:
+
+Threshold    | Value | Comment
+---------    | ----- | -------
+`soft-limit` | `90%` | Refuse new connections
+`hard-limit` | `93%` | Close active connections
+
+The `soft-limit` is used to prevent new clients from reaching the relay
+by refusing new connections and unenrolling the relay from the contract.
+It will be activated when **90%** of contract specified limit is
+reached. If the `hard-limit` is reached and there are still active
+connections, they will be closed. It will be activated when **93%** of
+the specified limit is reached.
+
+It's important to note that the global limit **does not** support
+`soft-limit`, and if reached the relay will disconnect all clients and
+unenroll from all the contracts. If the relay is configured with only
+one contract, it is recommended to specify the contract limit in order
+to enable `soft-limit` functionality.
+
+**Measurement**
+
+The relay measures **routed TCP streams only** (client-relay,
+relay-relay, relay-clearnet). H/2, TCP (layer 4), IP (layer 3), and
+lower headers (LAN and physical point-to-point link scopes) are not
+accounted for. Other traffic such as relay-contract, relay-dir, relay
+upgrades, and anything else outside of the scope of Wireleap is not
+accounted for.
+
+In other words, the network usage in-scope is wireleap traffic flowing
+through the relay. It should be 
+[relatively accurate, within a margin of error](https://www.wireleap.com/blog/relay-usage-cap#how-network-usage-is-measured).
 
 ## Testing
 
@@ -650,7 +580,7 @@ A note about the `master` branch:
 
 [github_flow]: https://guides.github.com/introduction/flow/
 
-### Fork, clone and setup upstream remote
+**Fork, clone and setup upstream remote**
 
 The following instructions outline the recommended procedure for
 creating a fork of this repository in order to contribute changes.
@@ -668,7 +598,7 @@ git pull --tags upstream master
 git config commit.gpgsign true
 ```
 
-### Create a feature branch and make your changes
+**Create a feature branch and make your changes**
 
 Create a descriptively named topic branch based on the `master` branch.
 Please take care to only address **one** issue/bug/feature per pull
@@ -688,7 +618,7 @@ commits should be clear.
 If a commit resolves a known issue or relates to other commits or PRs,
 please refer to them.
 
-### Unit testing
+**Unit testing**
 
 The unit tests can either be run on your host or within docker using the
 official golang docker image.
@@ -705,7 +635,7 @@ mkdir -p build/.deps
 DEPS_CACHE=build/.deps ./contrib/docker/run-tests.sh
 ```
 
-### Rebase on master if needed
+**Rebase on master if needed**
 
 It can happen that as you were working on a feature, the state of the
 `upstream/master` branch has changed due to merging other pull requests.
@@ -722,7 +652,7 @@ git rebase --interactive master DESCRIPTIVE_BRANCH_NAME
 After every change to the git history of your topic branch, perform
 testing to avoid regressions.
 
-### Push changes and submit a pull request
+**Push changes and submit a pull request**
 
 When you think the topic branch is ready for merging, passes all tests,
 all changes are committed with appropriate commit messages, and your
@@ -746,7 +676,7 @@ Finally, click `create pull request` so the reviewers can review and
 approve the changes, or request modifications prior to performing the
 merge.
 
-### Review process and merge
+**Review process and merge**
 
 The pull request may be approved or additional modifications might be
 requested by one of the reviewers. If modifications are requested,
