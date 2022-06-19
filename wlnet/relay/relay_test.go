@@ -73,13 +73,13 @@ func TestWLRelay(t *testing.T) {
 	r.Body = io.NopCloser(pr)
 	rw := httptest.NewRecorder()
 
-	// emulate relay
-	go rl.ServeHTTP(rw, r)
 	// emulate target
 	l, err := net.Listen("tcp", "localhost:8888")
 	if err != nil {
 		t.Fatal(err)
 	}
+	// emulate relay
+	go rl.ServeHTTP(rw, r)
 	// emulate client
 	con, err := l.Accept()
 	if err != nil {
