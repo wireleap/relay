@@ -27,6 +27,7 @@ import (
 	"github.com/wireleap/relay/filenames"
 	"github.com/wireleap/relay/relaycfg"
 	"github.com/wireleap/relay/relaylib"
+	"github.com/wireleap/relay/restapi"
 	"github.com/wireleap/relay/stscheduler"
 	"github.com/wireleap/relay/wlnet/relay"
 )
@@ -211,10 +212,20 @@ func serverun(fm fsdir.T) {
 		r.Manager.Stop()
 
 		fm.Del(filenames.Pid)
+		fm.Del(filenames.Socket)
 		return true
 	}
 
 	defer shutdown()
+
+	// Launch API REST goroutine
+	api := restapi.New(r.Manager)
+	go func() {
+		log.Println("Launching UnixSocket Server")
+		if err := restapi.UnixServer(fm.Path(filenames.Socket), 0660, api); err != nil {
+			log.Print(err)
+		}
+	}()
 
 	// check limit on open files (includes tcp connections)
 	var rlim syscall.Rlimit
