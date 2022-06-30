@@ -7,6 +7,7 @@ import (
 
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/status"
+	"github.com/wireleap/common/api/texturl"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
 	"github.com/wireleap/relay/api/epoch"
@@ -186,21 +187,22 @@ type netFns struct {
 
 // Contract Manager Status
 type managerStatus struct {
-	ControllerStarted bool
-	Since             *int64
-	Until             *int64
-	GlobalCap         *uint64
-	GlobalUsage       *uint64
-	RelayStatus       []relayStatus
+	ControllerStarted bool          `json:"controller_started"`
+	Since             *int64        `json:"timeframe_since"`
+	Until             *int64        `json:"timeframe_until"`
+	GlobalCap         *uint64       `json:"global_network_usage"`
+	GlobalUsage       *uint64       `json:"global_network_usage"`
+	RelayStatus       []relayStatus `json:"relay_status"`
 }
 
 // Relay status extended
 type relayStatus struct {
-	Id       string
-	Role     string
-	Status   relaylib.RelayFlags
-	NetCap   *uint64
-	NetUsage uint64
+	Id       string              `json:"id"`
+	Addr     *texturl.URL        `json:"addr"`
+	Role     string              `json:"role"`
+	Status   relaylib.RelayFlags `json:"status"`
+	NetCap   *uint64             `json:"network_cap"`
+	NetUsage uint64              `json:"netowrk_usage"`
 }
 
 // Contract Manager
@@ -665,6 +667,7 @@ func (m *Manager) Status() (ms managerStatus) {
 
 		mrs = append(mrs, relayStatus{
 			Id:       cid,
+			Addr:     rs.Addr,
 			Role:     rs.Role,
 			Status:   rs.Flags,
 			NetCap:   nc,
