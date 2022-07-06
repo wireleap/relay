@@ -7,6 +7,7 @@ package relaycfg
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/wireleap/common/api/duration"
@@ -34,12 +35,24 @@ type C struct {
 	// NetUsage is the allocated bandwith per time period.
 	// NetUsage is disabled if UsageCap.Duration is 0.
 	NetUsage NetUsage `json:"network_usage,omitempty"`
+	// RestApi configures the API REST services
+	RestApi RestApi `json:"rest_api,omitempty"`
 	// Contracts is the map of service contracts used by this wireleap-relay.
 	Contracts map[texturl.URL]*relayentry.T `json:"contracts,omitempty"`
 	// AutoUpgrade sets whether this relay should attempt auto-upgrades.
 	AutoUpgrade bool `json:"auto_upgrade,omitempty"`
 	// Those are expert settings. Take care.
 	DangerZone DangerZone `json:"danger_zone,omitempty"`
+}
+
+// RestApi
+type RestApi struct {
+	// Socket enabling
+	Socket bool `json:"socket_enabled"`
+	// Socket Umask
+	Umask os.FileMode `json:"socket_umask"`
+	// Address:Port
+	Address string `json:"tcp_addr"`
 }
 
 // Network usage soft-cap
@@ -65,8 +78,12 @@ func Defaults() C {
 		AutoSubmitInterval: duration.T(time.Minute * 5),
 		Timeout:            duration.T(time.Second * 5),
 		BufSize:            4096,
-		Contracts:          map[texturl.URL]*relayentry.T{},
-		AutoUpgrade:        true,
+		RestApi: RestApi{
+			Socket:    true,
+			Umask:     0600,
+		},
+		Contracts:   map[texturl.URL]*relayentry.T{},
+		AutoUpgrade: true,
 	}
 }
 

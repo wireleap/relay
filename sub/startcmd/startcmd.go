@@ -212,7 +212,10 @@ func serverun(fm fsdir.T) {
 		r.Manager.Stop()
 
 		fm.Del(filenames.Pid)
-		fm.Del(filenames.Socket)
+
+		if c.RestApi.Socket {
+			fm.Del(filenames.Socket)
+		}
 		return true
 	}
 
@@ -220,12 +223,7 @@ func serverun(fm fsdir.T) {
 
 	// Launch API REST goroutine
 	api := restapi.New(r.Manager)
-	go func() {
-		log.Println("Launching UnixSocket Server")
-		if err := restapi.UnixServer(fm.Path(filenames.Socket), 0660, api); err != nil {
-			log.Print(err)
-		}
-	}()
+	restapi.Run(c, fm.Path(filenames.Socket), api) // Launches go routines
 
 	// check limit on open files (includes tcp connections)
 	var rlim syscall.Rlimit

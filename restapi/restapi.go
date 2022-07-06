@@ -12,6 +12,7 @@ import (
 	"github.com/wireleap/common/api/provide"
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/relay/contractmanager"
+	"github.com/wireleap/relay/relaycfg"
 )
 
 type T struct {
@@ -44,18 +45,18 @@ func New(manager *contractmanager.Manager) (t *T) {
 	return
 }
 
-func UnixServer(p string, fm os.FileMode, t *T) error {
-	if err := os.RemoveAll(p); err != nil {
+func UnixServer(path string, fm os.FileMode, t *T) error {
+	if err := os.RemoveAll(path); err != nil {
 		return err
 	}
 
-	l, err := net.Listen("unix", p)
+	l, err := net.Listen("unix", path)
 	if err != nil {
 		return err
 	}
 	defer l.Close()
 
-	if err := os.Chmod(p, fm); err != nil {
+	if err := os.Chmod(path, fm); err != nil {
 		return err
 	}
 
@@ -63,12 +64,32 @@ func UnixServer(p string, fm os.FileMode, t *T) error {
 	return h.Serve(l)
 }
 
-func TCPServer(port string, t *T) error {
-	l, err := net.Listen("tcp", ":"+port)
+func TCPServer(addr string, t *T) error {
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 
 	h := &http.Server{Handler: t.mux}
 	return h.Serve(l)
+}
+
+func Run(cfg relaycfg.C, path string, t *T) {
+	if len(cfg.RestApi.Address) > 0 {
+		go func() {
+			log.Println("Launching TCP Server")
+			if err := TCPServer(cfg.RestApi.Address, t); err != nil {
+				log.Print(err)
+			}
+		}()
+	}
+
+	if cfg.RestApi.Socket {
+		go func() {
+			log.Println("Launching UnixSocket Server")
+			if err := UnixServer(path, cfg.RestApi.Umask, t); err != nil {
+				log.Print(err)
+			}
+		}()
+	}
 }
