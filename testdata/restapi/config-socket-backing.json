@@ -1,0 +1,16 @@
+{
+  "address": "0.0.0.0:4447",
+  "archive_dir": "archive/sharetokens",
+  "auto_submit_interval": "30s",
+  "contracts": {
+    "http://wireleap-contract:8080": {
+      "address": "wireleap://wireleap-relay-backing:4447",
+      "role": "backing",
+      "key": "bkey"
+    }
+  },
+  "rest_api": {
+    "addr": "file:///somepath.ss",
+    "socket_umask": "123"
+  }
+}

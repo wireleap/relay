@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"os"
 	"syscall"
 	"time"
 
@@ -213,9 +214,13 @@ func serverun(fm fsdir.T) {
 
 		fm.Del(filenames.Pid)
 
-		if c.RestApi.Socket {
-			fm.Del(filenames.Socket)
+		// Delete socket on shutdown
+		if c.RestApi.Address == nil {
+			// pass
+		} else if c.RestApi.Address.Scheme == "file" {
+			os.RemoveAll(c.RestApi.Address.Path)
 		}
+
 		return true
 	}
 
@@ -223,7 +228,7 @@ func serverun(fm fsdir.T) {
 
 	// Launch API REST goroutine
 	api := restapi.New(r.Manager)
-	restapi.Run(c, fm.Path(filenames.Socket), api) // Launches go routines
+	go restapi.Run(c.RestApi, api)
 
 	// check limit on open files (includes tcp connections)
 	var rlim syscall.Rlimit
