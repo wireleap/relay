@@ -10,7 +10,6 @@ const (
 	TLSCert     = "relay-cert.pem"
 	TLSKey      = "relay-key.pem"
 	Sharetokens = "sharetokens"
-	Socket      = "wireleap-relay.socket"
 	Log         = "wireleap-relay.log"
 	Stats       = "stats.json"
 )

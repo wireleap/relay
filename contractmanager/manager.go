@@ -202,7 +202,7 @@ type relayStatus struct {
 	Role     string              `json:"role"`
 	Status   relaylib.RelayFlags `json:"status"`
 	NetCap   *uint64             `json:"network_cap"`
-	NetUsage uint64              `json:"netowrk_usage"`
+	NetUsage uint64              `json:"network_usage"`
 }
 
 // Contract Manager
