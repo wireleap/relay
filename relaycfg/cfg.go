@@ -7,12 +7,12 @@ package relaycfg
 import (
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/wireleap/common/api/duration"
 	"github.com/wireleap/common/api/texturl"
 	relayentry "github.com/wireleap/relay/api/relayentryext"
+	"github.com/wireleap/relay/api/socket"
 
 	"github.com/c2h5oh/datasize"
 )
@@ -47,12 +47,10 @@ type C struct {
 
 // RestApi
 type RestApi struct {
-	// Socket enabling
-	Socket bool `json:"socket_enabled"`
-	// Socket Umask
-	Umask os.FileMode `json:"socket_umask"`
 	// Address:Port
-	Address string `json:"tcp_addr"`
+	Address *texturl.URL `json:"addr"`
+	// Socket Umask
+	Umask socket.FileMode `json:"socket_umask"`
 }
 
 // Network usage soft-cap
@@ -79,8 +77,7 @@ func Defaults() C {
 		Timeout:            duration.T(time.Second * 5),
 		BufSize:            4096,
 		RestApi: RestApi{
-			Socket:    true,
-			Umask:     0600,
+			Umask: 0600,
 		},
 		Contracts:   map[texturl.URL]*relayentry.T{},
 		AutoUpgrade: true,
@@ -122,6 +119,19 @@ func (c *C) Validate() error {
 	for k, v := range c.Contracts {
 		if err := v.Validate(); err != nil {
 			return fmt.Errorf("enrollment config for %s failed to validate: %w", k.String(), err)
+		}
+	}
+
+	if c.RestApi.Address != nil {
+		switch c.RestApi.Address.Scheme {
+		case "file":
+			if c.RestApi.Address.Host != "" {
+				return errors.New(`restapi address failed to validate: file path must start by "file:///"`)
+			}
+		case "http":
+			// pass
+		default:
+			return fmt.Errorf("restapi address failed to validate: %s", c.RestApi.Address.String())
 		}
 	}
 

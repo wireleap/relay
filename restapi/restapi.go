@@ -74,22 +74,20 @@ func TCPServer(addr string, t *T) error {
 	return h.Serve(l)
 }
 
-func Run(cfg relaycfg.C, path string, t *T) {
-	if len(cfg.RestApi.Address) > 0 {
-		go func() {
-			log.Println("Launching TCP Server")
-			if err := TCPServer(cfg.RestApi.Address, t); err != nil {
-				log.Print(err)
-			}
-		}()
-	}
+func Run(cfg relaycfg.RestApi, t *T) {
+	if cfg.Address == nil {
+		// Not defined, pass
+	} else if cfg.Address.Scheme == "http" {
+		log.Printf("Launching HTTP Server: %s\n", cfg.Address.Host)
+		if err := TCPServer(cfg.Address.Host, t); err != nil {
+			log.Print(err)
+		}
+	} else if cfg.Address.Scheme == "file" {
+		os.RemoveAll(cfg.Address.Path)
 
-	if cfg.RestApi.Socket {
-		go func() {
-			log.Println("Launching UnixSocket Server")
-			if err := UnixServer(path, cfg.RestApi.Umask, t); err != nil {
-				log.Print(err)
-			}
-		}()
+		log.Printf("Launching UnixSocket Server: %s\n", cfg.Address.Path)
+		if err := UnixServer(cfg.Address.Path, os.FileMode(cfg.Umask), t); err != nil {
+			log.Print(err)
+		}
 	}
 }
