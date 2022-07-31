@@ -96,7 +96,9 @@ func (c *C) Validate() error {
 		}
 	} else {
 		for _, sc := range c.Contracts {
-			sc.UpgradeChannel = "default"
+			if sc.UpgradeChannel == "" {
+				sc.UpgradeChannel = "default"
+			}
 		}
 	}
 
