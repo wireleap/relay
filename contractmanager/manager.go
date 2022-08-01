@@ -190,7 +190,7 @@ type managerStatus struct {
 	ControllerStarted bool          `json:"controller_started"`
 	Since             *int64        `json:"timeframe_since"`
 	Until             *int64        `json:"timeframe_until"`
-	GlobalCap         *uint64       `json:"global_network_usage"`
+	GlobalCap         *uint64       `json:"global_network_cap"`
 	GlobalUsage       *uint64       `json:"global_network_usage"`
 	RelayStatus       []relayStatus `json:"relay_status"`
 }
