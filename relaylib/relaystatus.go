@@ -52,8 +52,8 @@ type RelayStatus struct {
 }
 
 type RelayFlags struct {
-	Enrolled      bool
-	NetCapReached bool
+	Enrolled      bool `json:"enrolled"`
+	NetCapReached bool `json:"network_cap_reached"`
 	/**
 		ToDo: More flags to define the current status
 		- Failed heartbeats

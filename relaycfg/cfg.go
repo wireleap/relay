@@ -12,6 +12,7 @@ import (
 	"github.com/wireleap/common/api/duration"
 	"github.com/wireleap/common/api/texturl"
 	relayentry "github.com/wireleap/relay/api/relayentryext"
+	"github.com/wireleap/relay/api/socket"
 
 	"github.com/c2h5oh/datasize"
 )
@@ -34,12 +35,22 @@ type C struct {
 	// NetUsage is the allocated bandwith per time period.
 	// NetUsage is disabled if UsageCap.Duration is 0.
 	NetUsage NetUsage `json:"network_usage,omitempty"`
+	// RestApi configures the API REST services
+	RestApi RestApi `json:"rest_api,omitempty"`
 	// Contracts is the map of service contracts used by this wireleap-relay.
 	Contracts map[texturl.URL]*relayentry.T `json:"contracts,omitempty"`
 	// AutoUpgrade sets whether this relay should attempt auto-upgrades.
 	AutoUpgrade bool `json:"auto_upgrade,omitempty"`
 	// Those are expert settings. Take care.
 	DangerZone DangerZone `json:"danger_zone,omitempty"`
+}
+
+// RestApi
+type RestApi struct {
+	// Address:Port
+	Address *texturl.URL `json:"address"`
+	// Socket Umask
+	Umask socket.FileMode `json:"socket_umask"`
 }
 
 // Network usage soft-cap
@@ -65,8 +76,11 @@ func Defaults() C {
 		AutoSubmitInterval: duration.T(time.Minute * 5),
 		Timeout:            duration.T(time.Second * 5),
 		BufSize:            4096,
-		Contracts:          map[texturl.URL]*relayentry.T{},
-		AutoUpgrade:        true,
+		RestApi: RestApi{
+			Umask: 0600,
+		},
+		Contracts:   map[texturl.URL]*relayentry.T{},
+		AutoUpgrade: true,
 	}
 }
 
@@ -105,6 +119,19 @@ func (c *C) Validate() error {
 	for k, v := range c.Contracts {
 		if err := v.Validate(); err != nil {
 			return fmt.Errorf("enrollment config for %s failed to validate: %w", k.String(), err)
+		}
+	}
+
+	if c.RestApi.Address != nil {
+		switch c.RestApi.Address.Scheme {
+		case "file":
+			if c.RestApi.Address.Host != "" {
+				return errors.New(`restapi address failed to validate: file path must start by "file:///"`)
+			}
+		case "http":
+			// pass
+		default:
+			return fmt.Errorf("restapi address %s has unknown scheme: %s", c.RestApi.Address.String(), c.RestApi.Address.Scheme)
 		}
 	}
 

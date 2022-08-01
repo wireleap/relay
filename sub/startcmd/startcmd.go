@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"os"
 	"syscall"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/wireleap/relay/filenames"
 	"github.com/wireleap/relay/relaycfg"
 	"github.com/wireleap/relay/relaylib"
+	"github.com/wireleap/relay/restapi"
 	"github.com/wireleap/relay/stscheduler"
 	"github.com/wireleap/relay/wlnet/relay"
 )
@@ -211,10 +213,22 @@ func serverun(fm fsdir.T) {
 		r.Manager.Stop()
 
 		fm.Del(filenames.Pid)
+
+		// Delete socket on shutdown
+		if c.RestApi.Address == nil {
+			// pass
+		} else if c.RestApi.Address.Scheme == "file" {
+			os.RemoveAll(c.RestApi.Address.Path)
+		}
+
 		return true
 	}
 
 	defer shutdown()
+
+	// Launch API REST goroutine
+	api := restapi.New(r.Manager)
+	go restapi.Run(c.RestApi, api)
 
 	// check limit on open files (includes tcp connections)
 	var rlim syscall.Rlimit
