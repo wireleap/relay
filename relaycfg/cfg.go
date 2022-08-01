@@ -48,7 +48,7 @@ type C struct {
 // RestApi
 type RestApi struct {
 	// Address:Port
-	Address *texturl.URL `json:"addr"`
+	Address *texturl.URL `json:"address"`
 	// Socket Umask
 	Umask socket.FileMode `json:"socket_umask"`
 }
@@ -131,7 +131,7 @@ func (c *C) Validate() error {
 		case "http":
 			// pass
 		default:
-			return fmt.Errorf("restapi address failed to validate: %s", c.RestApi.Address.String())
+			return fmt.Errorf("restapi address %s has unknown scheme: %s", c.RestApi.Address.String(), c.RestApi.Address.Scheme)
 		}
 	}
 
