@@ -10,7 +10,7 @@
     }
   },
   "rest_api": {
-    "addr": "file:///somepath.ext",
+    "address": "file:///somepath.ext",
     "socket_umask": "123"
   }
 }
