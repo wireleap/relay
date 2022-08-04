@@ -3,40 +3,18 @@ package socket
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
-	"regexp"
 	"strconv"
 )
 
-var ErrUnsupportedBase = errors.New("unsuported base")
-var ErrInvalidNumber = errors.New("value doesn't correspond with base")
 var ErrInvalidPermissions = errors.New("invalid file permissions")
-
-// Validate number corresponds with base
-func validateBase(s string, base uint32) error {
-	// Only bases up to 10 are supported, this might chante in the future.
-	if base == 0 || base > 10 {
-		return ErrUnsupportedBase
-	}
-
-	pattern := fmt.Sprintf("^[0-%v]{3}$", base-1)
-
-	if match, err := regexp.MatchString(pattern, s); err != nil {
-		return err // Invalid pattern
-	} else if !match {
-		return ErrInvalidNumber
-	}
-
-	return nil
-}
 
 type FileMode fs.FileMode
 
 // MarshalJSON implements json.Marshaler.
 func (fm FileMode) MarshalJSON() ([]byte, error) {
 
-	if fm > 511 {
+	if fm > 0777 {
 		// Detect wrong permissions
 		return nil, ErrInvalidPermissions
 	}
@@ -69,10 +47,10 @@ func (fm *FileMode) UnmarshalJSON(data []byte) (err error) {
 
 	if err = json.Unmarshal(data, &value); err != nil {
 		// probably it's an valid json
-	} else if err = validateBase(value, 8); err != nil {
+	} else if len(value) != 3 {
+		err = ErrInvalidPermissions // Validate permissions length
+	} else if intVal, err = strconv.ParseUint(value, 8, 9); err != nil {
 		err = ErrInvalidPermissions // Validate permissions format
-	} else if intVal, err = strconv.ParseUint(value, 8, 32); err != nil {
-		err = ErrInvalidPermissions // This should never fail
 	} else {
 		*fm = FileMode(uint32(intVal))
 	}
