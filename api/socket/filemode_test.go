@@ -1,39 +1,40 @@
 package socket
 
 import (
+	"strconv"
 	"testing"
 )
 
-/**
-func TestBaseConversion(t *testing.T) {
-	result := baseConversion(10, 10, 8)
-	if result != uint32(12) {
-		t.Fatal("Invalid result")
-	}
-
-	result = baseConversion(20, 8, 10)
-	if result != uint32(16) {
-		t.Fatal("Invalid result")
-	}
-}
-
 func TestValidateBase(t *testing.T) {
-	err := validateBase(0, 11)
+	i, err := strconv.ParseUint("777", 8, 9)
+	if err != nil {
+		t.Fatal(err)
+	} else if i != 0777 {
+		t.Fatal("Value wrongly parsed")
+	}
+
+	_, err = strconv.ParseUint("002", 2, 9)
 	if err == nil {
 		t.Fatal("Must have failed")
 	}
 
-	err = validateBase(2, 2)
+	i, err = strconv.ParseUint("003", 4, 9)
+	if err != nil {
+		t.Fatal(err)
+	} else if i != 3 {
+		t.Fatal("Value wrongly parsed")
+	}
+
+	_, err = strconv.ParseUint("1000", 8, 9)
 	if err == nil {
 		t.Fatal("Must have failed")
 	}
 
-	err = validateBase(3, 4)
+	_, err = strconv.ParseUint("1000", 8, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
-**/
 
 func TestFileModeUnmarshal(t *testing.T) {
 	var fm FileMode
