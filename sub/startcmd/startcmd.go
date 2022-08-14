@@ -228,7 +228,7 @@ func serverun(fm fsdir.T) {
 
 	// Launch API REST goroutine
 	api := restapi.New(r.Manager)
-	go restapi.Run(c.RestApi, api)
+	go api.Run(c.RestApi)
 
 	// check limit on open files (includes tcp connections)
 	var rlim syscall.Rlimit

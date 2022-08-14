@@ -31,21 +31,25 @@ func (t *T) reply(w http.ResponseWriter, x interface{}) {
 	w.Write(b) //err to check
 }
 
-func New(manager *contractmanager.Manager) (t *T) {
-	t = &T{
-		manager: manager,
-		l:       log.Default(),
-		mux:     http.NewServeMux(),
-	}
+func (t *T) Run(cfg relaycfg.RestApi) {
+	if cfg.Address == nil {
+		// Not defined, pass
+	} else if cfg.Address.Scheme == "http" {
+		log.Printf("Launching HTTP Server: %s\n", cfg.Address.Host)
+		if err := t.TCPServer(cfg.Address.Host); err != nil {
+			log.Print(err)
+		}
+	} else if cfg.Address.Scheme == "file" {
+		os.RemoveAll(cfg.Address.Path)
 
-	t.mux.Handle("/api/status", provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		o := t.manager.Status()
-		t.reply(w, o)
-	})}))
-	return
+		log.Printf("Launching UnixSocket Server: %s\n", cfg.Address.Path)
+		if err := t.UnixServer(cfg.Address.Path, os.FileMode(cfg.Umask)); err != nil {
+			log.Print(err)
+		}
+	}
 }
 
-func UnixServer(path string, fm os.FileMode, t *T) error {
+func (t *T) UnixServer(path string, fm os.FileMode) error {
 	if err := os.RemoveAll(path); err != nil {
 		return err
 	}
@@ -64,7 +68,7 @@ func UnixServer(path string, fm os.FileMode, t *T) error {
 	return h.Serve(l)
 }
 
-func TCPServer(addr string, t *T) error {
+func (t *T) TCPServer(addr string) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -74,20 +78,16 @@ func TCPServer(addr string, t *T) error {
 	return h.Serve(l)
 }
 
-func Run(cfg relaycfg.RestApi, t *T) {
-	if cfg.Address == nil {
-		// Not defined, pass
-	} else if cfg.Address.Scheme == "http" {
-		log.Printf("Launching HTTP Server: %s\n", cfg.Address.Host)
-		if err := TCPServer(cfg.Address.Host, t); err != nil {
-			log.Print(err)
-		}
-	} else if cfg.Address.Scheme == "file" {
-		os.RemoveAll(cfg.Address.Path)
-
-		log.Printf("Launching UnixSocket Server: %s\n", cfg.Address.Path)
-		if err := UnixServer(cfg.Address.Path, os.FileMode(cfg.Umask), t); err != nil {
-			log.Print(err)
-		}
+func New(manager *contractmanager.Manager) (t *T) {
+	t = &T{
+		manager: manager,
+		l:       log.Default(),
+		mux:     http.NewServeMux(),
 	}
+
+	t.mux.Handle("/api/status", provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		o := t.manager.Status()
+		t.reply(w, o)
+	})}))
+	return
 }
