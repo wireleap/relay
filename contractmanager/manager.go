@@ -198,7 +198,7 @@ type managerStatus struct {
 // Relay status extended
 type relayStatus struct {
 	Id       string              `json:"id"`
-	Addr     *texturl.URL        `json:"addr"`
+	Addr     *texturl.URL        `json:"address"`
 	Role     string              `json:"role"`
 	Status   relaylib.RelayFlags `json:"status"`
 	NetCap   *uint64             `json:"network_cap"`
