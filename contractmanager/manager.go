@@ -185,13 +185,18 @@ type netFns struct {
 	nextReset      time.Time
 }
 
+// Contract Manager Network Status
+type networkUsage struct {
+	Since *int64  `json:"timeframe_since"`
+	Until *int64  `json:"timeframe_until"`
+	Cap   *uint64 `json:"cap"`
+	Usage *uint64 `json:"usage"`
+}
+
 // Contract Manager Status
 type managerStatus struct {
 	ControllerStarted bool          `json:"controller_started"`
-	Since             *int64        `json:"timeframe_since"`
-	Until             *int64        `json:"timeframe_until"`
-	GlobalCap         *uint64       `json:"global_network_cap"`
-	GlobalUsage       *uint64       `json:"global_network_usage"`
+	Network           *networkUsage `json:"network_usage"`
 	RelayStatus       []relayStatus `json:"relay_status"`
 }
 
@@ -683,11 +688,14 @@ func (m *Manager) Status() (ms managerStatus) {
 	if m.NetStats.Enabled() {
 		until := epoch.ToEpochMillis(m.netFns.nextReset)
 
-		ms.Since = &m.NetStats.Active.CreatedAt
-		ms.Until = &until
-		ms.GlobalUsage = &sum
+		ms.Network = &networkUsage{
+			Since: &m.NetStats.Active.CreatedAt,
+			Until: &until,
+			Usage: &sum,
+		}
+
 		if m.netCaps.Enabled() {
-			ms.GlobalCap = &m.netCaps.globalCap
+			ms.Network.Cap = &m.netCaps.globalCap
 		}
 	}
 
