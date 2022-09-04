@@ -19,6 +19,7 @@ This repository is for the Wireleap relay.
     - [Apache configuration example](#apache-configuration-example)
     - [Nginx configuration example](#nginx-configuration-example)
 - [Network usage and limits](#network-usage-and-limits)
+- [API REST](#api-rest)
 - [Testing](#testing)
 - [Production](#production)
     - [Increase ulimit](#increase-ulimit)
@@ -99,6 +100,8 @@ contracts.X.role                | `string` | `fronting` `entropic` `backing`
 contracts.X.key                 | `string` | `user:password` format enrollment key if required
 contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract
 contracts.X.upgrade_channel     | `string` | upgrade channel (default: `"default"`)
+rest_api.address                | `string` | api rest address (`host:port` or `file:///path`, optional)
+rest_api.socket_umask           | `string` | unix socket permissions (default: `600`)
 auto_upgrade                    | `bool`   | automatically upgrade this relay (default: `true`)
 
 ```json
@@ -123,7 +126,12 @@ auto_upgrade                    | `bool`   | automatically upgrade this relay (d
             "role": "entropic",
             "network_usage_limit": "1TB"
         }
-    }
+    },
+    "rest_api": {
+        "address": "file:///run/wireleap",
+        "socket_umask": "660"
+    },
+    "auto_upgrade": true
 }
 ```
 
@@ -229,6 +237,13 @@ network_usage.write_interval    | `string` | interval between autosaves
 network_usage.archive_dir       | `string` | path of the archived statistics directory
 contracts.X.network_usage_limit | `string` | maximum routed traffic for this contract
 
+`network_usage.timeframe` works as a enable flag, if not set the network
+usage measurement (and limit) is entirely disabled. If modified, the
+current timeframe will be recalculated using the saved stating date.
+Values will only be reset if the saved timeframe is already ended.
+
+To manually reset the statistics, please remove the `./stats.json` file.
+
 **Timeframes and records**
 
 Timeframes are configured in the [`duration.T`](https://pkg.go.dev/github.com/wireleap/common/api/duration)
@@ -289,6 +304,26 @@ accounted for.
 In other words, the network usage in-scope is wireleap traffic flowing
 through the relay. It should be 
 [relatively accurate, within a margin of error](https://www.wireleap.com/blog/relay-usage-cap#how-network-usage-is-measured).
+
+## API REST
+
+The Wireleap relay exposes an HTTP API REST on a unix socket or tcp port.
+
+At this moment the API has very limited functionality, but it
+will be extened in the upcoming releases.
+
+**Configuration**
+
+Key                   | Type     | Comment
+---                   | ----     | -------
+rest_api.address      | `string` | api rest address (`host:port` or `file:///path`)
+rest_api.socket_umask | `string` | unix socket permissions (default: `600`)
+
+**Endpoints**
+
+Endpoint      | Method | Purpose
+---           | ----   | -------
+`/api/status` | `GET`  | network usage and cap statistics
 
 ## Testing
 
