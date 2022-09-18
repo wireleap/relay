@@ -33,7 +33,7 @@ type C struct {
 	// BufSize is the size in bytes of transmit/receive buffers.
 	BufSize int `json:"bufsize,omitempty"`
 	// NetUsage is the allocated bandwith per time period.
-	// NetUsage is disabled if UsageCap.Duration is 0.
+	// NetUsage is disabled if NetUsage.Timeframe is 0.
 	NetUsage NetUsage `json:"network_usage,omitempty"`
 	// RestApi configures the API REST services
 	RestApi RestApi `json:"rest_api,omitempty"`
