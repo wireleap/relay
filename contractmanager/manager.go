@@ -272,7 +272,7 @@ func (m *Manager) setNetStats() {
 
 		if fns, err := saveStats(m.NetStats.Active, m.Controller.Contracts(), m.NetStats.legacy); err != nil {
 			log.Print(err)
-		} else if errS := m.fm.Set(fns, filenames.Stats); errS != nil {
+		} else if errS := m.fm.SetIndented(fns, filenames.Stats); errS != nil {
 			log.Fatalf("could not store network usage file: %s", errS)
 		}
 	}
