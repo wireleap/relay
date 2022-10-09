@@ -49,7 +49,7 @@ func loadStats(fm fsdir.T, contractIds []string) (netstats relaystats.NetStats, 
 		netstats = relaystats.Load(fns, map_counter.NewList)
 	} else if errors.Is(err, os.ErrNotExist) {
 		// lazy file generation
-		if err = fm.Set(fns, filenames.Stats); err != nil {
+		if err = fm.SetIndented(fns, filenames.Stats); err != nil {
 			err = fmt.Errorf("could not initialise statistics file: %s", err)
 			return
 		}
