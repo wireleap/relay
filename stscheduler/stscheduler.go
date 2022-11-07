@@ -17,7 +17,7 @@ type T struct {
 	tt        *time.Ticker
 }
 
-func New(dur time.Duration, submit func(*sharetoken.T) error) (t *T) {
+func New(dur time.Duration, submit func(*sharetoken.T) error, expire func(*sharetoken.T) error) (t *T) {
 	t = &T{
 		tt:        time.NewTicker(dur),
 		scheduled: map[int64][]*sharetoken.T{},
@@ -38,6 +38,14 @@ func New(dur time.Duration, submit func(*sharetoken.T) error) (t *T) {
 
 							if st.IsExpiredAt(ntime.Unix()) {
 								// next attempt will fail
+								if errX := expire(st); errX != nil {
+									log.Printf(
+										"could not expire failed sharetoken (sig=%s): %s",
+										st.Signature,
+										errX,
+									)
+								}
+
 								blurb = "next submission attempt is past submission window! skipping sharetoken"
 							} else {
 								// try again later
