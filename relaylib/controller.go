@@ -55,7 +55,7 @@ func (c *Controller) add(scurl texturl.URL, cfg *relayentry.T) (contractId strin
 	}
 
 	var rs relayStatus
-	if rs, err = NewRelayStatus(c.client, scurl, cfg); err == nil {
+	if rs, err = NewRelayStatus(c.client, scurl, contractId, cfg); err == nil {
 		c.relays[contractId] = &rs
 	} else {
 		contractId = ""
@@ -356,6 +356,15 @@ func (c *Controller) Contracts() (l []string) {
 
 	for contractId, _ := range c.relays {
 		l = append(l, contractId)
+	}
+	return
+}
+
+func (c *Controller) Role(contractId string) (role string, err error) {
+	if rs, ok := c.relays[contractId]; !ok {
+		err = fmt.Errorf(errTmpl, ErrContractNotFound, contractId)
+	} else {
+		role = rs.Relay.Role
 	}
 	return
 }

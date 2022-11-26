@@ -24,7 +24,9 @@ import (
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/api/texturl"
 
+	"github.com/wireleap/relay/api/labels"
 	"github.com/wireleap/relay/api/relayentryext"
+	"github.com/wireleap/relay/telemetry"
 	"github.com/wireleap/relay/version"
 )
 
@@ -41,6 +43,7 @@ type relayStatus struct {
 	scUrl  string
 	lock   *sync.RWMutex
 	status RelayFlags
+	labels labels.Contract
 	ctx    ctx_
 }
 
@@ -70,7 +73,7 @@ func (c ctx_) isNil() bool {
 	return c.Context == nil
 }
 
-func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentryext.T) (rs relayStatus, err error) {
+func NewRelayStatus(cl *client.Client, scurl texturl.URL, cId string, cfg *relayentryext.T) (rs relayStatus, err error) {
 	sc := scurl.String()
 	if err = cfg.Validate(); err != nil {
 		return
@@ -111,11 +114,17 @@ func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentryext.T) 
 		return
 	}
 
+	ctlabs := labels.Contract{
+		Contract: cId,
+		Role:     cfg.Role,
+	}
+
 	rs = relayStatus{
-		Relay: d,
-		rdUrl: dirurl,
-		scUrl: sc,
-		lock:  &sync.RWMutex{},
+		Relay:  d,
+		rdUrl:  dirurl,
+		scUrl:  sc,
+		lock:   &sync.RWMutex{},
+		labels: ctlabs,
 	}
 	return
 }

@@ -90,7 +90,7 @@ func TestRelay(t *testing.T) {
 		var url = texturl.URLMustParse("https://wireleap.com")
 
 		t.Run("setup", func(t *testing.T) {
-			rs_tmp, err := NewRelayStatus(cl, *url, &re)
+			rs_tmp, err := NewRelayStatus(cl, *url, "", &re)
 
 			if err != nil {
 				t.Fatal(err)
@@ -145,7 +145,7 @@ func TestRelay(t *testing.T) {
 		var url = texturl.URLMustParse("https://wireleap.com")
 
 		t.Run("setup", func(t *testing.T) {
-			rs_tmp, err := NewRelayStatus(cl, *url, &re)
+			rs_tmp, err := NewRelayStatus(cl, *url, "", &re)
 
 			if err != nil {
 				t.Fatal(err)
@@ -187,7 +187,7 @@ func TestRelay(t *testing.T) {
 		var url = texturl.URLMustParse("https://wireleap.com")
 
 		t.Run("setup", func(t *testing.T) {
-			rs_tmp, err := NewRelayStatus(cl, *url, &re)
+			rs_tmp, err := NewRelayStatus(cl, *url, "", &re)
 
 			if err != nil {
 				t.Fatal(err)
@@ -317,7 +317,7 @@ func TestErrHandlers(t *testing.T) {
 		exErr := errors.New("Example error")
 
 		t.Run("setup", func(t *testing.T) {
-			rs_tmp, err := NewRelayStatus(cl, *url, &re)
+			rs_tmp, err := NewRelayStatus(cl, *url, "", &re)
 
 			if err != nil {
 				t.Fatal(err)
