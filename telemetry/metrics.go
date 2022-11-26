@@ -24,4 +24,8 @@ var Metrics struct {
 		CapLimitStatus    func(labels.Contract) prometheus.Gauge       `name:"caplimit_status" help:"Capacity threshold status"`
 		TotalBytes        func(labels.Connection) prometheus.Counter   `name:"total_bytes" help:"Number of rerouted bytes"`
 	} `namespace:"network"`
+	ST struct {
+		Scheduled func(labels.Contract) prometheus.Gauge      `name:"scheduled_count" help:"Number of scheduled sharetokens"`
+		Submitted func(labels.ContractErr) prometheus.Counter `name:"submitted_count" help:"Number of submitted sharetokens"`
+	} `namespace:"sharetoken"`
 }
