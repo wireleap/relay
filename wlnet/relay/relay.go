@@ -261,17 +261,20 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (t *T) monitorRWC(cIn, cOut io.ReadWriteCloser, ctId string) (io.ReadWriteCloser, io.ReadWriteCloser, func() error) {
+func (t *T) monitorRWC(cIn, cOut io.ReadWriteCloser, ctlabs labels.Contract) (io.ReadWriteCloser, io.ReadWriteCloser, func() error) {
 	// To extend if other metrics need to be recorded
-	syncCounter := t.Manager.NetStats.Active.ContractStats.GetOrInit(ctId)
+	syncCounter := t.Manager.NetStats.Active.ContractStats.GetOrInit(ctlabs.Contract)
 	in, out := syncCounter.Inner() // Get inner counters
-	return meteredrwc.New(cIn, in), meteredrwc.New(cOut, out), syncCounter.Close
+
+	connlabs := ctlabs.GetConnection()
+	lIn, lOut := connlabs.SetOrigin("client"), connlabs.SetOrigin("target")
+	return meteredrwc.New(cIn, in, lIn), meteredrwc.New(cOut, out, lOut), syncCounter.Close
 }
 
 func (t *T) meteredSplice(ctx context.Context, cIn, cOut io.ReadWriteCloser, ctlabs labels.Contract) error {
 	var closeFn func() error
 	if t.Manager.NetStats.Enabled() {
-		cIn, cOut, closeFn = t.monitorRWC(cIn, cOut, ctlabs.Contract)
+		cIn, cOut, closeFn = t.monitorRWC(cIn, cOut, ctlabs)
 	}
 
 	defer func() {

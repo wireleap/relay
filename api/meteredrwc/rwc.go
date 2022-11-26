@@ -6,28 +6,33 @@ import (
 	"io"
 	"sync/atomic"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/wireleap/relay/api/labels"
+	"github.com/wireleap/relay/telemetry"
 )
 
 /**
   Updates:
   - synced *uint64 + internal int on read
-  - prometheus telemetry (duration + bytes) on close [ToDo]
+  - prometheus telemetry (duration + bytes) on close
 **/
 type MRWC struct {
-	rwc   io.ReadWriteCloser
-	bytes int
-	//promCounter prometheus.Counter
-	//promHist TimeHistogram
-	startAt   time.Time
-	syncBytes *uint64
+	rwc         io.ReadWriteCloser
+	bytes       int
+	promCounter prometheus.Counter
+	promTProc   telemetry.TimeHistogram
+	startAt     time.Time
+	syncBytes   *uint64
 }
 
-func New(rwc io.ReadWriteCloser, syncBytes *uint64) io.ReadWriteCloser {
-	// ToDo: Add promCounter and promHist
+func New(rwc io.ReadWriteCloser, syncBytes *uint64, connLabs labels.Connection) io.ReadWriteCloser {
 	return &MRWC{
-		rwc:       rwc,
-		startAt:   time.Now(),
-		syncBytes: syncBytes,
+		rwc:         rwc,
+		promCounter: telemetry.Metrics.Net.TotalBytes(connLabs),
+		promTProc:   telemetry.Metrics.Conn.Lifetime(),
+		startAt:     time.Now(),
+		syncBytes:   syncBytes,
 	}
 }
 
@@ -35,6 +40,8 @@ func (mRWC *MRWC) update(i int) {
 	if mRWC.syncBytes != nil {
 		atomic.AddUint64(mRWC.syncBytes, uint64(i))
 	}
+
+	mRWC.promCounter.Add(float64(i))
 	mRWC.bytes = mRWC.bytes + i
 }
 
@@ -49,6 +56,7 @@ func (mRWC *MRWC) Write(p []byte) (n int, err error) {
 }
 
 func (mRWC *MRWC) Close() error {
-	//duration := time.Since(mRWC.startAt)
+	mRWC.promTProc.Since(mRWC.startAt)
+
 	return mRWC.rwc.Close()
 }
