@@ -13,6 +13,8 @@ import (
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/relay/contractmanager"
 	"github.com/wireleap/relay/relaycfg"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type T struct {
@@ -78,7 +80,7 @@ func (t *T) TCPServer(addr string) error {
 	return h.Serve(l)
 }
 
-func New(manager *contractmanager.Manager) (t *T) {
+func New(manager *contractmanager.Manager, telemetry_opt bool) (t *T) {
 	t = &T{
 		manager: manager,
 		l:       log.Default(),
@@ -89,5 +91,10 @@ func New(manager *contractmanager.Manager) (t *T) {
 		o := t.manager.Status()
 		t.reply(w, o)
 	})}))
+
+	if telemetry_opt {
+		t.mux.Handle("/metrics", promhttp.Handler())
+		t.l.Print("Enabling telemetry endpoint")
+	}
 	return
 }

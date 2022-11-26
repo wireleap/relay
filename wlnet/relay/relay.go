@@ -19,9 +19,10 @@ import (
 	"github.com/wireleap/common/wlnet/flushwriter"
 	"github.com/wireleap/common/wlnet/h2rwc"
 	"github.com/wireleap/common/wlnet/transport"
+	"github.com/wireleap/relay/api/labels"
 	"github.com/wireleap/relay/api/meteredrwc"
-	"github.com/wireleap/relay/api/meteredrwc/mrwclabels"
 	"github.com/wireleap/relay/contractmanager"
+	"github.com/wireleap/relay/telemetry"
 )
 
 type T struct {
@@ -88,13 +89,22 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ReadCloser: r.Body,
 	}
 
-	var ctlabs mrwclabels.ContractLabels
+	var ctlabs labels.Contract
+	//ctlabs := labels.Contract{Contract: "unknown"}
 	defer c.Close()
 
 	origin := t.ErrorOrigin
 	p, err := wlnet.InitFromHeaders(r.Header)
 
 	if err != nil {
+		/**
+		telemetry.Metrics.Conn.Total(ctlabs).Inc()
+		telemetry.Metrics.Conn.Open(ctlabs).Inc()
+		defer telemetry.Metrics.Conn.Open(ctlabs).Dec()
+
+		telemetry.Metrics.Conn.Error(ctlabs.WithErr("bad request")).Inc()
+		**/
+
 		(&status.T{
 			Code:   http.StatusBadRequest,
 			Desc:   err.Error(),
@@ -105,6 +115,11 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if p.Command == "PING" {
 		// raw, not in wlnet wire format
+		ctlabs = ctlabs.SetContract("ping")
+		telemetry.Metrics.Conn.Total(ctlabs).Inc()
+		//telemetry.Metrics.Conn.Open(ctlabs).Inc() // Muted
+		//defer telemetry.Metrics.Conn.Open(ctlabs).Dec() // Muted
+
 		(&status.T{
 			Code:   http.StatusOK,
 			Desc:   "PONG",
@@ -118,25 +133,49 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// check if contract is accepted by the relay controller
 	var ctx context.Context
+
 	if t.Manager.Controller != nil {
+		if role, rErr := t.Manager.Controller.Role(contractId); rErr == nil {
+			ctlabs = ctlabs.SetRole(role)
+		}
+
 		ctx, err = t.Manager.Controller.NewConn(contractId)
 
 		if err != nil {
+			errStr := err.Error()
+
+			telemetry.Metrics.Conn.Total(ctlabs).Inc()
+			telemetry.Metrics.Conn.Open(ctlabs).Inc()
+			defer telemetry.Metrics.Conn.Open(ctlabs).Dec()
+
+			// ToDo: Telemetry to improve
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr(errStr)).Inc()
+
 			(&status.T{
 				Code:   http.StatusBadRequest,
-				Desc:   err.Error(),
+				Desc:   errStr,
 				Origin: origin,
 			}).ToHeader(h)
 			return
 		}
+
 	} else {
 		ctx = context.Background()
 	}
+
+	//TCPOpenConns++
+	//telemetry.Metrics.MitM.TCPRTT(labels).Since(t)
+	telemetry.Metrics.Conn.Total(ctlabs).Inc()
+	telemetry.Metrics.Conn.Open(ctlabs).Inc()
+	defer telemetry.Metrics.Conn.Open(ctlabs).Dec()
 
 	if t.HandleST != nil {
 		err = t.HandleST(p.Token)
 
 		if err != nil {
+			// ToDo: Telemetry to improve
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("invalid sharetoken")).Inc()
+
 			(&status.T{
 				Code:   http.StatusBadRequest,
 				Desc:   err.Error(),
@@ -153,6 +192,9 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// no dials to localhost (this relay's host)
 	if !t.AllowLoopback && isLoopback(p.Remote.Hostname()) {
+		// ToDo: Telemetry to improve
+		telemetry.Metrics.Conn.Error(ctlabs.WithErr("loopback access denied")).Inc()
+
 		(&status.T{
 			Code: http.StatusBadRequest,
 			Desc: fmt.Sprintf(
@@ -179,12 +221,14 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// TODO more granular errors
 
 		if os.IsTimeout(err) {
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("dialing timeout")).Inc()
 			(&status.T{
 				Code:   http.StatusRequestTimeout,
 				Desc:   err.Error(),
 				Origin: origin,
 			}).ToHeader(h)
 		} else {
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("dialing error")).Inc()
 			(&status.T{
 				Code:   http.StatusBadGateway,
 				Desc:   err.Error(),
@@ -201,6 +245,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// TODO more granular errors
 
 		if os.IsTimeout(err) {
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("circuit timeout")).Inc()
 			(&status.T{
 				Code:   http.StatusRequestTimeout,
 				Desc:   err.Error(),
@@ -216,17 +261,20 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (t *T) monitorRWC(cIn, cOut io.ReadWriteCloser, ctId string) (io.ReadWriteCloser, io.ReadWriteCloser, func() error) {
+func (t *T) monitorRWC(cIn, cOut io.ReadWriteCloser, ctlabs labels.Contract) (io.ReadWriteCloser, io.ReadWriteCloser, func() error) {
 	// To extend if other metrics need to be recorded
-	syncCounter := t.Manager.NetStats.Active.ContractStats.GetOrInit(ctId)
+	syncCounter := t.Manager.NetStats.Active.ContractStats.GetOrInit(ctlabs.Contract)
 	in, out := syncCounter.Inner() // Get inner counters
-	return meteredrwc.New(cIn, in), meteredrwc.New(cOut, out), syncCounter.Close
+
+	connlabs := ctlabs.GetConnection()
+	lIn, lOut := connlabs.SetOrigin("client"), connlabs.SetOrigin("target")
+	return meteredrwc.New(cIn, in, lIn), meteredrwc.New(cOut, out, lOut), syncCounter.Close
 }
 
-func (t *T) meteredSplice(ctx context.Context, cIn, cOut io.ReadWriteCloser, ctlabs mrwclabels.ContractLabels) error {
+func (t *T) meteredSplice(ctx context.Context, cIn, cOut io.ReadWriteCloser, ctlabs labels.Contract) error {
 	var closeFn func() error
 	if t.Manager.NetStats.Enabled() {
-		cIn, cOut, closeFn = t.monitorRWC(cIn, cOut, ctlabs.Contract)
+		cIn, cOut, closeFn = t.monitorRWC(cIn, cOut, ctlabs)
 	}
 
 	defer func() {

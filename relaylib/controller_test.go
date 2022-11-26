@@ -148,6 +148,24 @@ func TestController(t *testing.T) {
 			}
 		})
 
+		t.Run("getRole", func(t *testing.T) {
+			role, err := c.Role(contractId)
+
+			if err != nil {
+				t.Fatal(err)
+			} else if role != "backing" {
+				t.Fatal("Wrong role")
+			}
+
+			role, err = c.Role("unknownContract")
+
+			if err == nil {
+				t.Fatal("Contract should be unknown")
+			} else if role != "" {
+				t.Fatal("Wrong role")
+			}
+		})
+
 		t.Run("reloadEnrolled", func(t *testing.T) {
 			err := c.update(contractId, &re)
 

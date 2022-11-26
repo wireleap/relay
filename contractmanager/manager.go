@@ -11,12 +11,14 @@ import (
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
 	"github.com/wireleap/relay/api/epoch"
+	"github.com/wireleap/relay/api/labels"
 	"github.com/wireleap/relay/api/synccounters"
 	"github.com/wireleap/relay/filenames"
 	"github.com/wireleap/relay/relaycfg"
 	"github.com/wireleap/relay/relaylib"
 	"github.com/wireleap/relay/relaystats"
 	"github.com/wireleap/relay/relaystats/nustore"
+	"github.com/wireleap/relay/telemetry"
 	"github.com/wireleap/relay/version"
 
 	"errors"
@@ -141,11 +143,16 @@ func (n netCapsCfg) HardCap() (map[string]uint64, uint64) {
 }
 
 // Retuns new map and global soft+hard cap calculations
-func (n netCapsCfg) Caps() (resCaps map[string]cap, resGlobal cap) {
+func (n netCapsCfg) Caps(controller *relaylib.Controller) (resCaps map[string]cap, resGlobal cap) {
 	resGlobal = cap{
 		soft: uint64(float64(n.globalCap) * netCapSoftLimit),
 		hard: uint64(float64(n.globalCap) * netCapHardLimit),
 	}
+
+	// Telemetry
+	ct := labels.Contract{Contract: "global"}
+	//telemetry.Metrics.Net.CapLimitsBytes(ct.WithCapMode("soft")).Set(float64(resGlobal.soft))
+	telemetry.Metrics.Net.CapLimitsBytes(ct.WithCapMode("hard")).Set(float64(resGlobal.hard))
 
 	contractCaps := n.contractCaps()
 
@@ -154,6 +161,16 @@ func (n netCapsCfg) Caps() (resCaps map[string]cap, resGlobal cap) {
 		soft := uint64(float64(u) * netCapSoftLimit) // softFactor
 		hard := uint64(float64(u) * netCapHardLimit) // hardFactor
 		resCaps[k] = cap{soft, hard}
+
+		// Telemetry
+		role, err := controller.Role(k)
+		if err != nil {
+			log.Print(err)
+		}
+
+		ct = labels.Contract{Contract: k, Role: role}
+		telemetry.Metrics.Net.CapLimitsBytes(ct.WithCapMode("soft")).Set(float64(soft))
+		telemetry.Metrics.Net.CapLimitsBytes(ct.WithCapMode("hard")).Set(float64(hard))
 	}
 	return
 }
@@ -283,7 +300,7 @@ func (m *Manager) setReachedCaps() {
 
 		// gather external data sources
 		contracts := m.Controller.Contracts()
-		caps, globalXCap := m.netCaps.Caps()
+		caps, globalXCap := m.netCaps.Caps(m.Controller)
 
 		// initialise global counter
 		sum := uint64(0)
@@ -310,20 +327,56 @@ func (m *Manager) setReachedCaps() {
 				sum = sum + i
 			}
 
-			if ct_cap, ok := caps[contract]; !ok {
-				// pass
-			} else if i > ct_cap.hard {
-				reachedCaps[contract] = hardCap
-			} else if i > ct_cap.soft {
-				reachedCaps[contract] = softCap
+			// telemetry labels
+			role, err := m.Controller.Role(contract)
+			if err != nil {
+				// This should never fail
+				return true
 			}
+
+			ct := labels.Contract{Contract: contract, Role: role}
+
+			if ct_cap, ok := caps[contract]; ok {
+				if i > ct_cap.hard {
+					reachedCaps[contract] = hardCap
+					telemetry.Metrics.Net.CapLimitStatus(ct).Set(hardCap) //telmetry
+				} else if i > ct_cap.soft {
+					reachedCaps[contract] = softCap
+					telemetry.Metrics.Net.CapLimitStatus(ct).Set(softCap) //telmetry
+				} else {
+					telemetry.Metrics.Net.CapLimitStatus(ct).Set(okCap) //telmetry
+				}
+
+				// telemetry
+				f := float64(i)
+				telemetry.Metrics.Net.RemainingCapBytes(ct.WithCapMode("soft")).Set(float64(ct_cap.soft) - f)
+				telemetry.Metrics.Net.RemainingCapBytes(ct.WithCapMode("hard")).Set(float64(ct_cap.hard) - f)
+			} else {
+				telemetry.Metrics.Net.CapLimitStatus(ct).Set(okCap - 1)
+			}
+
 			return true
 		}
 
 		m.NetStats.Active.ContractStats.Range(f)
 
+		// telemetry labels
+		ct := labels.Contract{Contract: "global"}
+
 		if m.netCaps.globalCap != 0 {
 			globalCap = sum >= globalXCap.hard
+
+			// telemetry
+			//telemetry.Metrics.Net.RemainingCapBytes(ct.WithCapMode("soft")).Set(float64(globalXCap.soft) - float64(sum))
+			telemetry.Metrics.Net.RemainingCapBytes(ct.WithCapMode("hard")).Set(float64(globalXCap.hard) - float64(sum))
+
+			if globalCap {
+				telemetry.Metrics.Net.CapLimitStatus(ct).Set(hardCap)
+			} else {
+				telemetry.Metrics.Net.CapLimitStatus(ct).Set(okCap)
+			}
+		} else {
+			telemetry.Metrics.Net.CapLimitStatus(ct).Set(okCap - 1)
 		}
 
 		return
@@ -341,6 +394,8 @@ func (m *Manager) setReachedCapsMock() {
 		reachedCaps = make(map[string]int, len(contracts))
 		for _, ct := range contracts {
 			reachedCaps[ct] = okCap
+
+			// skipping telemetry
 		}
 
 		return

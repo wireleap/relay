@@ -24,7 +24,9 @@ import (
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/api/texturl"
 
+	"github.com/wireleap/relay/api/labels"
 	"github.com/wireleap/relay/api/relayentryext"
+	"github.com/wireleap/relay/telemetry"
 	"github.com/wireleap/relay/version"
 )
 
@@ -41,6 +43,7 @@ type relayStatus struct {
 	scUrl  string
 	lock   *sync.RWMutex
 	status RelayFlags
+	labels labels.Contract
 	ctx    ctx_
 }
 
@@ -70,7 +73,7 @@ func (c ctx_) isNil() bool {
 	return c.Context == nil
 }
 
-func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentryext.T) (rs relayStatus, err error) {
+func NewRelayStatus(cl *client.Client, scurl texturl.URL, cId string, cfg *relayentryext.T) (rs relayStatus, err error) {
 	sc := scurl.String()
 	if err = cfg.Validate(); err != nil {
 		return
@@ -111,12 +114,21 @@ func NewRelayStatus(cl *client.Client, scurl texturl.URL, cfg *relayentryext.T) 
 		return
 	}
 
-	rs = relayStatus{
-		Relay: d,
-		rdUrl: dirurl,
-		scUrl: sc,
-		lock:  &sync.RWMutex{},
+	ctlabs := labels.Contract{
+		Contract: cId,
+		Role:     cfg.Role,
 	}
+
+	rs = relayStatus{
+		Relay:  d,
+		rdUrl:  dirurl,
+		scUrl:  sc,
+		lock:   &sync.RWMutex{},
+		labels: ctlabs,
+	}
+
+	// Telemetry
+	telemetry.Metrics.Contract.Enrolled(rs.labels).Set(0)
 	return
 }
 
@@ -168,6 +180,12 @@ func (rs *relayStatus) enroll(cl *client.Client, init bool, errHandler func(*rel
 		rs.status.Enrolled = true
 		rs.status.NetCapReached = false
 
+		// Telemetry
+		if init {
+			telemetry.Metrics.Contract.Enrolled(rs.labels).Set(1)
+		}
+		telemetry.Metrics.Contract.Heartbeat(rs.labels.WithErr("")).Inc()
+
 		if rs.ctx.isNil() {
 			// Renew context if not initialised
 			ctx, cancel := context.WithCancel(context.Background())
@@ -175,6 +193,14 @@ func (rs *relayStatus) enroll(cl *client.Client, init bool, errHandler func(*rel
 		}
 	} else if errHandler != nil {
 		err = errHandler(rs, err)
+
+		// Telemetry
+		// To improve error classification
+		ctlabs := rs.labels.WithErr(err.Error())
+		if !init {
+			telemetry.Metrics.Contract.Heartbeat(ctlabs).Inc()
+		}
+		telemetry.Metrics.Contract.Error(ctlabs).Inc()
 	}
 	return
 }
@@ -191,8 +217,16 @@ func (rs *relayStatus) disenroll(cl *client.Client, errHandler func(*relayStatus
 	if err == nil {
 		// Update relay status
 		rs.status.Enrolled = false
+
+		// Telemetry
+		telemetry.Metrics.Contract.Enrolled(rs.labels).Set(0)
 	} else if errHandler != nil {
 		err = errHandler(rs, err)
+
+		// Telemetry
+		// To improve error classification
+		ctlabs := rs.labels.WithErr(err.Error())
+		telemetry.Metrics.Contract.Error(ctlabs).Inc()
 	}
 	return
 }
@@ -229,6 +263,9 @@ func (rs *relayStatus) ForceDisenroll(cl *client.Client) bool {
 	if rs.disenroll(cl, nil) != nil {
 		// Force RS status
 		rs.status.Enrolled = false
+
+		// Telemetry
+		telemetry.Metrics.Contract.Enrolled(rs.labels).Set(0)
 		return false
 	}
 	return true

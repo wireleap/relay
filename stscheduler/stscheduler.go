@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/wireleap/common/api/sharetoken"
+	"github.com/wireleap/relay/api/labels"
+	"github.com/wireleap/relay/telemetry"
 )
 
 type T struct {
@@ -32,6 +34,9 @@ func New(dur time.Duration, submit func(*sharetoken.T) error) (t *T) {
 			for t0, sts := range t.scheduled {
 				if t0 <= now.Unix() {
 					for _, st := range sts {
+						// Telemetry
+						ctlabs := labels.ContractErr{Contract: st.Contract.PublicKey.String()}
+
 						if err := submit(st); err != nil {
 							ntime := now.Add(dur)
 							blurb := ""
@@ -39,10 +44,17 @@ func New(dur time.Duration, submit func(*sharetoken.T) error) (t *T) {
 							if st.IsExpiredAt(ntime.Unix()) {
 								// next attempt will fail
 								blurb = "next submission attempt is past submission window! skipping sharetoken"
+
+								// Telemetry
+								telemetry.Metrics.ST.Scheduled(ctlabs.GetContract()).Dec()
+								ctlabs = ctlabs.SetError("permanent failure")
 							} else {
 								// try again later
 								t.scheduled[ntime.Unix()] = append(t.scheduled[ntime.Unix()], st)
 								blurb = fmt.Sprintf("next submission attempt at %s", ntime)
+
+								// Telemetry
+								ctlabs = ctlabs.SetError("temporary failure")
 							}
 
 							log.Printf(
@@ -51,8 +63,15 @@ func New(dur time.Duration, submit func(*sharetoken.T) error) (t *T) {
 								err,
 								blurb,
 							)
+
+							// Telemetry
+							telemetry.Metrics.ST.Submitted(ctlabs).Inc()
 						} else {
 							n++
+
+							// Telemetry
+							telemetry.Metrics.ST.Scheduled(ctlabs.GetContract()).Dec()
+							telemetry.Metrics.ST.Submitted(ctlabs).Inc()
 						}
 					}
 					// submission of all sts complete or postponed, clean up
@@ -81,4 +100,9 @@ func (t *T) Schedule(st *sharetoken.T) {
 		st.Signature,
 		time.Unix(when, 0),
 	)
+
+	// Telemetry
+	ctlabs := labels.Contract{Contract: st.Contract.PublicKey.String()}
+
+	telemetry.Metrics.ST.Scheduled(ctlabs).Inc()
 }

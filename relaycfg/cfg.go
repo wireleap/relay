@@ -51,6 +51,8 @@ type RestApi struct {
 	Address *texturl.URL `json:"address"`
 	// Socket Umask
 	Umask socket.FileMode `json:"socket_umask"`
+	// Activate telemetry endpoint
+	Telemetry bool `json:"telemetry"`
 }
 
 // Network usage soft-cap

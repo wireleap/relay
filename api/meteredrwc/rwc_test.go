@@ -8,6 +8,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/wireleap/relay/api/labels"
 )
 
 var test = []byte{'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd'}
@@ -21,7 +23,7 @@ func TestRetransmit(t *testing.T) {
 	c1, c2 := net.Pipe()
 	go c2.Write(test) // Buffer alike
 
-	r := New(c1, &i)
+	r := New(c1, &i, labels.Connection{})
 
 	var w bytes.Buffer
 
