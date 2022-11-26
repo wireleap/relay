@@ -19,8 +19,8 @@ import (
 	"github.com/wireleap/common/wlnet/flushwriter"
 	"github.com/wireleap/common/wlnet/h2rwc"
 	"github.com/wireleap/common/wlnet/transport"
+	"github.com/wireleap/relay/api/labels"
 	"github.com/wireleap/relay/api/meteredrwc"
-	"github.com/wireleap/relay/api/meteredrwc/mrwclabels"
 	"github.com/wireleap/relay/contractmanager"
 )
 
@@ -88,7 +88,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ReadCloser: r.Body,
 	}
 
-	var ctlabs mrwclabels.ContractLabels
+	var ctlabs labels.Contract
 	defer c.Close()
 
 	origin := t.ErrorOrigin
@@ -223,7 +223,7 @@ func (t *T) monitorRWC(cIn, cOut io.ReadWriteCloser, ctId string) (io.ReadWriteC
 	return meteredrwc.New(cIn, in), meteredrwc.New(cOut, out), syncCounter.Close
 }
 
-func (t *T) meteredSplice(ctx context.Context, cIn, cOut io.ReadWriteCloser, ctlabs mrwclabels.ContractLabels) error {
+func (t *T) meteredSplice(ctx context.Context, cIn, cOut io.ReadWriteCloser, ctlabs labels.Contract) error {
 	var closeFn func() error
 	if t.Manager.NetStats.Enabled() {
 		cIn, cOut, closeFn = t.monitorRWC(cIn, cOut, ctlabs.Contract)
