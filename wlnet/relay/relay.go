@@ -22,6 +22,7 @@ import (
 	"github.com/wireleap/relay/api/labels"
 	"github.com/wireleap/relay/api/meteredrwc"
 	"github.com/wireleap/relay/contractmanager"
+	"github.com/wireleap/relay/telemetry"
 )
 
 type T struct {
@@ -89,12 +90,21 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var ctlabs labels.Contract
+	//ctlabs := labels.Contract{Contract: "unknown"}
 	defer c.Close()
 
 	origin := t.ErrorOrigin
 	p, err := wlnet.InitFromHeaders(r.Header)
 
 	if err != nil {
+		/**
+		telemetry.Metrics.Conn.Total(ctlabs).Inc()
+		telemetry.Metrics.Conn.Open(ctlabs).Inc()
+		defer telemetry.Metrics.Conn.Open(ctlabs).Dec()
+
+		telemetry.Metrics.Conn.Error(ctlabs.WithErr("bad request")).Inc()
+		**/
+
 		(&status.T{
 			Code:   http.StatusBadRequest,
 			Desc:   err.Error(),
@@ -105,6 +115,11 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if p.Command == "PING" {
 		// raw, not in wlnet wire format
+		ctlabs = ctlabs.SetContract("ping")
+		telemetry.Metrics.Conn.Total(ctlabs).Inc()
+		//telemetry.Metrics.Conn.Open(ctlabs).Inc() // Muted
+		//defer telemetry.Metrics.Conn.Open(ctlabs).Dec() // Muted
+
 		(&status.T{
 			Code:   http.StatusOK,
 			Desc:   "PONG",
@@ -118,25 +133,49 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// check if contract is accepted by the relay controller
 	var ctx context.Context
+
 	if t.Manager.Controller != nil {
+		if role, rErr := t.Manager.Controller.Role(contractId); rErr == nil {
+			ctlabs = ctlabs.SetRole(role)
+		}
+
 		ctx, err = t.Manager.Controller.NewConn(contractId)
 
 		if err != nil {
+			errStr := err.Error()
+
+			telemetry.Metrics.Conn.Total(ctlabs).Inc()
+			telemetry.Metrics.Conn.Open(ctlabs).Inc()
+			defer telemetry.Metrics.Conn.Open(ctlabs).Dec()
+
+			// ToDo: Telemetry to improve
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr(errStr)).Inc()
+
 			(&status.T{
 				Code:   http.StatusBadRequest,
-				Desc:   err.Error(),
+				Desc:   errStr,
 				Origin: origin,
 			}).ToHeader(h)
 			return
 		}
+
 	} else {
 		ctx = context.Background()
 	}
+
+	//TCPOpenConns++
+	//telemetry.Metrics.MitM.TCPRTT(labels).Since(t)
+	telemetry.Metrics.Conn.Total(ctlabs).Inc()
+	telemetry.Metrics.Conn.Open(ctlabs).Inc()
+	defer telemetry.Metrics.Conn.Open(ctlabs).Dec()
 
 	if t.HandleST != nil {
 		err = t.HandleST(p.Token)
 
 		if err != nil {
+			// ToDo: Telemetry to improve
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("invalid sharetoken")).Inc()
+
 			(&status.T{
 				Code:   http.StatusBadRequest,
 				Desc:   err.Error(),
@@ -153,6 +192,9 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// no dials to localhost (this relay's host)
 	if !t.AllowLoopback && isLoopback(p.Remote.Hostname()) {
+		// ToDo: Telemetry to improve
+		telemetry.Metrics.Conn.Error(ctlabs.WithErr("loopback access denied")).Inc()
+
 		(&status.T{
 			Code: http.StatusBadRequest,
 			Desc: fmt.Sprintf(
@@ -179,12 +221,14 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// TODO more granular errors
 
 		if os.IsTimeout(err) {
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("dialing timeout")).Inc()
 			(&status.T{
 				Code:   http.StatusRequestTimeout,
 				Desc:   err.Error(),
 				Origin: origin,
 			}).ToHeader(h)
 		} else {
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("dialing error")).Inc()
 			(&status.T{
 				Code:   http.StatusBadGateway,
 				Desc:   err.Error(),
@@ -201,6 +245,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// TODO more granular errors
 
 		if os.IsTimeout(err) {
+			telemetry.Metrics.Conn.Error(ctlabs.WithErr("circuit timeout")).Inc()
 			(&status.T{
 				Code:   http.StatusRequestTimeout,
 				Desc:   err.Error(),
