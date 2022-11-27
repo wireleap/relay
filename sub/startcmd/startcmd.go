@@ -137,7 +137,7 @@ func serverun(fm fsdir.T) {
 				)
 			}
 			return nil
-		})
+		}, sts.Exp)
 
 		// schedule tokens in store for submission on startup
 		for _, st := range sts.Filter("", "") {
